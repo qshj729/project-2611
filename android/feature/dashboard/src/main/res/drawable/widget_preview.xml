@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Widget 的预览图：一个简单的收藏卡片示意。
+  Widget 的 RemoteViews 是在宿主（桌面）进程里渲染的，
+  主题属性（?attr/...）不可靠，所以这里用固定颜色 + drawable-night 变体。
+-->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item>
+        <shape android:shape="rectangle">
+            <solid android:color="@color/widget_background" />
+            <corners android:radius="16dp" />
+        </shape>
+    </item>
+    <item
+        android:bottom="56dp"
+        android:left="12dp"
+        android:right="12dp"
+        android:top="12dp">
+        <shape android:shape="rectangle">
+            <solid android:color="@color/widget_text_secondary" />
+            <corners android:radius="8dp" />
+        </shape>
+    </item>
+    <item
+        android:bottom="88dp"
+        android:left="12dp"
+        android:right="80dp"
+        android:top="12dp">
+        <shape android:shape="rectangle">
+            <solid android:color="@color/widget_text_secondary" />
+            <corners android:radius="8dp" />
+        </shape>
+    </item>
+</layer-list>

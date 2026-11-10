@@ -40,9 +40,16 @@ dependencies {
 
     implementation(platform(libs.compose.bom))
     implementation(libs.bundles.compose.runtime)
+    implementation(libs.compose.foundation)
     implementation(libs.bundles.feature.viewmodel)
     implementation(libs.bundles.feature.hilt)
     ksp(libs.hilt.compiler)
 
+    // 桌面 Widget 点击后拉起 Custom Tab（契约 C-11 / ADR-007）
+    implementation(libs.androidx.browser)
+
+    implementation(libs.kotlinx.coroutines.core)
+
     testImplementation(libs.junit)
+    testImplementation(libs.kotlinx.coroutines.test)
 }
