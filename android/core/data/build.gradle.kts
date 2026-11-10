@@ -38,6 +38,7 @@ dependencies {
     api(project(":core:model"))
 
     implementation(libs.bundles.core.data)
+    implementation(libs.bundles.feature.hilt)
     ksp(libs.room.compiler)
 
     testImplementation(libs.junit)

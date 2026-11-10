@@ -1,15 +1,18 @@
 package com.hubdeck.app.ui
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.localContext
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
-import com.hubdeck.app.ui.dashboard.DashboardScreen
-import com.hubdeck.app.ui.service.ServiceDetailScreen
+import com.hubdeck.app.ui.dashboard.DashboardRoute
+import com.hubdeck.app.ui.service.ServiceDetailRoute
 import com.hubdeck.app.ui.settings.SettingsScreen
 import com.hubdeck.app.ui.tailscale.TailscaleScreen
+import com.hubdeck.app.ui.service.ServiceOpener
 
 private object Routes {
     const val DASHBOARD = "dashboard"
@@ -24,8 +27,9 @@ fun HubDeckApp() {
 
     NavHost(navController = navController, startDestination = Routes.DASHBOARD) {
         composable(Routes.DASHBOARD) {
-            DashboardScreen(
+            DashboardRoute(
                 onOpenService = { serviceId -> navController.navigate("service/$serviceId") },
+                onAddService = {},
                 onOpenSettings = { navController.navigate(Routes.SETTINGS) },
                 onOpenTailscale = { navController.navigate(Routes.TAILSCALE) },
             )
@@ -35,18 +39,23 @@ fun HubDeckApp() {
             route = Routes.SERVICE_DETAIL,
             arguments = listOf(navArgument("serviceId") { type = NavType.StringType }),
         ) { entry ->
-            ServiceDetailScreen(
-                serviceId = entry.arguments?.getString("serviceId").orEmpty(),
-                onBack = { navController.popBackStack() },
+            val serviceId = entry.arguments?.getString("serviceId").orEmpty()
+            ServiceDetailRoute(
+                serviceId = serviceId,
+                onBack = { navController.popBack_stack() },
+                onOpenUrl = { url ->
+                    val context = localContext
+                    ServiceOpener.open(context, url)
+                },
             )
         }
 
         composable(Routes.SETTINGS) {
-            SettingsScreen(onBack = { navController.popBackStack() })
+            SettingsScreen(onBack = { navController.popBack_stack() })
         }
 
         composable(Routes.TAILSCALE) {
-            TailscaleScreen(onBack = { navController.popBackStack() })
+            TailscaleScreen(onBack = { navController.popBack_stack() })
         }
     }
 }
