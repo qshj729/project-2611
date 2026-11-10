@@ -93,7 +93,7 @@ class WidgetRemoteViewsFactory(
         val services = catalog.observeServices().first().filter { it.pinned }
         if (services.isEmpty()) return@runBlocking emptyList()
 
-        val tailnetState: TailnetState = runCatching { tailnet.refreshLocalState() }.getOrElse { TailnetState() }
+        val tailnetState = runCatching { tailnet.refreshLocalState() }.getOrNull()
         val networkContext: NetworkContext = networkContextResolver.resolve(tailnet = tailnetState)
 
         services.mapNotNull { service: Service ->
