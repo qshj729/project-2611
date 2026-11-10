@@ -1,0 +1,16 @@
+# Gradle / Android 构建产物
+.gradle/
+build/
+local.properties
+*.iml
+.idea/
+captures/
+.cxx/
+.externalNativeBuild/
+
+# 本地工具链与缓存（不进版本库）
+.toolchain/
+
+# OS
+.DS_Store
+Thumbs.db

@@ -1,0 +1,52 @@
+package com.hubdeck.app.ui
+
+import androidx.compose.runtime.Composable
+import androidx.navigation.NavType
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
+import com.hubdeck.app.ui.dashboard.DashboardScreen
+import com.hubdeck.app.ui.service.ServiceDetailScreen
+import com.hubdeck.app.ui.settings.SettingsScreen
+import com.hubdeck.app.ui.tailscale.TailscaleScreen
+
+private object Routes {
+    const val DASHBOARD = "dashboard"
+    const val SETTINGS = "settings"
+    const val TAILSCALE = "tailscale"
+    const val SERVICE_DETAIL = "service/{serviceId}"
+}
+
+@Composable
+fun HubDeckApp() {
+    val navController = rememberNavController()
+
+    NavHost(navController = navController, startDestination = Routes.DASHBOARD) {
+        composable(Routes.DASHBOARD) {
+            DashboardScreen(
+                onOpenService = { serviceId -> navController.navigate("service/$serviceId") },
+                onOpenSettings = { navController.navigate(Routes.SETTINGS) },
+                onOpenTailscale = { navController.navigate(Routes.TAILSCALE) },
+            )
+        }
+
+        composable(
+            route = Routes.SERVICE_DETAIL,
+            arguments = listOf(navArgument("serviceId") { type = NavType.StringType }),
+        ) { entry ->
+            ServiceDetailScreen(
+                serviceId = entry.arguments?.getString("serviceId").orEmpty(),
+                onBack = { navController.popBackStack() },
+            )
+        }
+
+        composable(Routes.SETTINGS) {
+            SettingsScreen(onBack = { navController.popBackStack() })
+        }
+
+        composable(Routes.TAILSCALE) {
+            TailscaleScreen(onBack = { navController.popBackStack() })
+        }
+    }
+}
