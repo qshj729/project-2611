@@ -60,21 +60,27 @@ ksp {
 }
 
 dependencies {
-    implementation(libs.androidx.core.ktx)
-    implementation(libs.androidx.activity.compose)
-    implementation(libs.androidx.lifecycle.runtime.ktx)
-    implementation(libs.androidx.lifecycle.viewmodel.compose)
-    implementation(libs.androidx.lifecycle.runtime.compose)
-    implementation(libs.androidx.browser)
-    implementation(libs.androidx.navigation.compose)
-    implementation(libs.coroutines.android)
+    // ---------------------------------------------------------------------------
+    // 多模块骨架（docs/design.md §7.2）
+    //
+    // app 只做装配壳（Application / MainActivity / 导航 / DI）。
+    // 目前各模块只有依赖声明，代码仍留在 app 里；每条实现线把自己的包搬进对应模块后，
+    // 再把这里对应的直接依赖删掉即可。
+    // ---------------------------------------------------------------------------
+    implementation(project(":core:model"))
+    implementation(project(":core:data"))
+    implementation(project(":core:network"))
+    implementation(project(":core:tailscale"))
+    implementation(project(":feature:dashboard"))
+    implementation(project(":feature:service"))
+    implementation(project(":feature:settings"))
+    implementation(project(":feature:tailscale"))
+
+    // 通用依赖走版本目录里的模块级 bundle，版本只在 gradle/libs.versions.toml 维护
+    implementation(libs.bundles.app.runtime)
 
     implementation(platform(libs.compose.bom))
-    implementation(libs.compose.ui)
-    implementation(libs.compose.ui.graphics)
-    implementation(libs.compose.ui.tooling.preview)
-    implementation(libs.compose.material3)
-    implementation(libs.compose.material.icons.extended)
+    implementation(libs.bundles.compose.runtime)
     debugImplementation(libs.compose.ui.tooling)
 
     implementation(libs.hilt.android)

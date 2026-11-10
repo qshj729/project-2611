@@ -1,0 +1,87 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# CI 只读仓库，不需要写权限
+permissions:
+  contents: read
+
+# 同一分支的新 push 取消旧 run
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: 构建 / 单测 / Lint
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        # Gradle 工程在 android/ 下，所有 gradle 命令都从这里跑
+        working-directory: android
+
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 准备 JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: 准备 Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: 准备 Gradle（缓存依赖与构建缓存）
+        uses: gradle/actions/setup-gradle@v3
+        with:
+          working-directory: android
+
+      - name: 校验 Gradle Wrapper
+        # 1) 官方 checksum 校验（wrapper jar 必须与 Gradle 发布的官方产物一致）
+        uses: gradle/wrapper-validation-action@v2
+        with:
+          gradle-version: '8.9'
+
+      - name: 校验 Wrapper 与仓库一致 + 列出模块
+        run: |
+          # 重新生成 wrapper，若与仓库里提交的不一致则 git diff 非空 → 步骤失败
+          ./gradlew wrapper --gradle-version 8.9 --gradle-distribution-type bin
+          git diff --exit-code -- gradle/wrapper gradlew gradlew.bat
+          # 模块清单（docs/design.md §7.2）
+          ./gradlew projects
+
+      - name: 校验 :core:model 是纯 Kotlin 模块（不依赖 Android SDK）
+        run: |
+          ./gradlew :core:model:dependencies --configuration runtimeClasspath > model-deps.txt
+          cat model-deps.txt
+          if grep -Eiq 'androidx|com\.android' model-deps.txt; then
+            echo "::error:::core:model 依赖了 Android SDK 库，违反 docs/contracts.md §6"
+            exit 1
+          fi
+
+      - name: 构建 + 单测 + Lint
+        # 与本地 `scripts/build.sh :app:assembleDebug :app:testDebugUnitTest :app:lintDebug` 完全同命令
+        working-directory: .
+        run: scripts/build.sh :app:assembleDebug :app:testDebugUnitTest :app:lintDebug
+
+      - name: 上传 debug APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: hubdeck-debug-apk
+          path: android/app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
+
+      - name: 上传单测与 Lint 报告
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: hubdeck-reports
+          path: |
+            android/app/build/reports/tests/testDebugUnitTest/
+            android/app/build/reports/lint-results-debug.html
+          if-no-files-found: warn
