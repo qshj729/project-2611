@@ -24,6 +24,8 @@ export GRADLE_USER_HOME="$HUBDECK_TOOLCHAIN/gradle-home"
 
 export PATH="$JAVA_HOME/bin:$ANDROID_HOME/platform-tools:$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/build-tools/35.0.0:$PATH"
 
-# 本地没有 emulator / system-images（磁盘只剩约 2.4G，装不下 system image）。
-# 设备测试走两条路：接入真机用 adb，或用 limrun 云模拟器（需要 LIM_API_KEY）。
-export PATH="$PATH:$HOME/.local/bin"
+# 2026-11-11 起工具链已含 emulator 37.3.8 + system-image（android-34 google_apis x86_64），
+# 本地模拟器（通道 D）可用；真机走 adb（通道 A），limrun 云模拟器走 lim（通道 B，需要 LIM_API_KEY）。
+# 注意：本机 /dev/kvm 属 root:kvm，用户不在 kvm 组时模拟器需 TCG 软模拟
+#（ANDROID_I_WANT_MY_TCG=yes -accel off），启动极慢且与构建抢资源，构建期间先停模拟器。
+export PATH="$PATH:$ANDROID_HOME/emulator:$HOME/.local/bin"

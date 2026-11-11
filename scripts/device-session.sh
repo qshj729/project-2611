@@ -1,9 +1,11 @@
 #!/usr/bin/env bash
 # HubDeck 设备测试通道助手
 #
-# 统一两条设备通道的操作，避免 CMP-8（测试基线与验收证据）反复手写 adb / lim 命令：
+# 统一三条设备通道的操作，避免 CMP-8（测试基线与验收证据）反复手写 adb / lim 命令：
 #   通道 A：USB 或无线调试的真机，走原生 adb
 #   通道 B：Limrun 云模拟器，走 lim CLI
+#   通道 D：本地模拟器（AVD），同样走原生 adb（序列号形如 emulator-5554），启动见
+#           docs/device-test-channel.md §4
 #
 # 用法:
 #   scripts/device-session.sh status              # 探测可用通道 + 打印设备信息
@@ -33,6 +35,7 @@ APP_PACKAGE="${HUB_DECK_PACKAGE:-com.hubdeck.app.debug}"
 DEFAULT_APK="$REPO_ROOT/android/app/build/outputs/apk/debug/app-debug.apk"
 CHANNEL="none"
 SERIAL=""
+IS_EMULATOR="no"
 LIM_ID="${HUB_DECK_DEVICE_ID:-}"
 
 log()  { printf '%s\n' "$*"; }
@@ -59,6 +62,7 @@ find_lim() {
 detect_channel() {
   CHANNEL="none"
   SERIAL=""
+  IS_EMULATOR="no"
   LIM_ID="${HUB_DECK_DEVICE_ID:-}"
 
   if command -v adb >/dev/null 2>&1; then
@@ -74,6 +78,9 @@ detect_channel() {
       if [ "$state" = "device" ]; then
         CHANNEL="adb"
         SERIAL="$serial"
+        case "$serial" in
+          emulator-*) IS_EMULATOR="yes" ;;
+        esac
         return 0
       fi
     done <<< "$(adb devices 2>/dev/null)"
@@ -94,6 +101,7 @@ detect_channel() {
 
 no_channel_hint() {
   warn "当前没有可用设备通道。"
+  warn "  通道 D（本地模拟器）：emulator -avd hubdeck_api34 -no-window -no-audio 启动已建好的 AVD（需 /dev/kvm 权限，或 ANDROID_I_WANT_MY_TCG=yes -accel off 软模拟）。"
   warn "  通道 A（真机）：把开启「USB 调试 / 无线调试」的设备接到本机，adb devices 能看到 device 状态。"
   warn "  通道 B（云模拟器）：lim login --api-key <key> 或 export LIM_API_KEY=<key>，然后 lim android create。"
   warn "详见 docs/device-test-channel.md。"
@@ -135,7 +143,12 @@ print_info() {
     case "$SERIAL" in
       *:*) conn="无线调试 (adb over TCP)" ;;
     esac
-    log "通道      : A / adb 真机"
+    if [ "$IS_EMULATOR" = "yes" ]; then
+      conn="本地模拟器（AVD，adb over TCP）"
+      log "通道      : D / 本地模拟器"
+    else
+      log "通道      : A / adb 真机"
+    fi
     log "序列号    : $SERIAL"
     log "连接方式  : $conn"
     log "型号      : ${model:-未知}"

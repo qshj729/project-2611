@@ -15,3 +15,6 @@ captures/
 # OS
 .DS_Store
 Thumbs.db
+
+# 设备验收截图（本地产物，证据走附件/文档）
+docs/shots/
