@@ -2,7 +2,7 @@ package com.hubdeck.app.ui
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.localContext
+import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -12,7 +12,6 @@ import com.hubdeck.app.ui.dashboard.DashboardRoute
 import com.hubdeck.app.ui.service.ServiceDetailRoute
 import com.hubdeck.app.ui.settings.SettingsScreen
 import com.hubdeck.app.ui.tailscale.TailscaleScreen
-import com.hubdeck.app.ui.service.ServiceOpener
 
 private object Routes {
     const val DASHBOARD = "dashboard"
@@ -40,22 +39,22 @@ fun HubDeckApp() {
             arguments = listOf(navArgument("serviceId") { type = NavType.StringType }),
         ) { entry ->
             val serviceId = entry.arguments?.getString("serviceId").orEmpty()
+            val context = LocalContext.current
             ServiceDetailRoute(
                 serviceId = serviceId,
-                onBack = { navController.popBack_stack() },
+                onBack = { navController.popBackStack() },
                 onOpenUrl = { url ->
-                    val context = localContext
                     ServiceOpener.open(context, url)
                 },
             )
         }
 
         composable(Routes.SETTINGS) {
-            SettingsScreen(onBack = { navController.popBack_stack() })
+            SettingsScreen(onBack = { navController.popBackStack() })
         }
 
         composable(Routes.TAILSCALE) {
-            TailscaleScreen(onBack = { navController.popBack_stack() })
+            TailscaleScreen(onBack = { navController.popBackStack() })
         }
     }
 }

@@ -257,3 +257,82 @@ fun ServiceEditContent(
         }
     }
 }
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun EndpointDraftCard(
+    draft: EndpointDraft,
+    magicDnsSuffix: String?,
+    onHostChange: (String) -> Unit,
+    onPortChange: (String) -> Unit,
+    onTemplateChange: (String) -> Unit,
+    onScopeChange: (EndpointScope) -> Unit,
+    onPrimaryChange: (Boolean) -> Unit,
+    onRemove: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+    ) {
+        Column(
+            modifier = Modifier.padding(12.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                FlowRow(
+                    modifier = Modifier.weight(1f),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    EndpointScope.entries.forEach { scope ->
+                        FilterChip(
+                            selected = draft.scope == scope,
+                            onClick = { onScopeChange(scope) },
+                            label = { Text(text = scope.displayLabel()) },
+                        )
+                    }
+                }
+                IconButton(onClick = onRemove) {
+                    Icon(imageVector = Icons.Default.Delete, contentDescription = "删除这个地址")
+                }
+            }
+
+            OutlinedTextField(
+                value = draft.host,
+                onValueChange = onHostChange,
+                modifier = Modifier.fillMaxWidth(),
+                label = { Text(text = "主机名") },
+                singleLine = true,
+            )
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedTextField(
+                    value = draft.port,
+                    onValueChange = onPortChange,
+                    modifier = Modifier.weight(1f),
+                    label = { Text(text = "端口（可选）") },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                )
+                OutlinedTextField(
+                    value = draft.urlTemplate,
+                    onValueChange = onTemplateChange,
+                    modifier = Modifier.weight(2f),
+                    label = { Text(text = "URL 模板") },
+                    singleLine = true,
+                )
+            }
+            Text(
+                text = "预览：${draft.previewUrl(magicDnsSuffix)}",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Switch(checked = draft.isPrimary, onCheckedChange = onPrimaryChange)
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(text = "同网络类型内的首选地址", style = MaterialTheme.typography.bodyMedium)
+            }
+        }
+    }
+}
