@@ -7,6 +7,8 @@ import com.hubdeck.app.core.model.EndpointScope
 import com.hubdeck.app.core.model.HealthMode
 import com.hubdeck.app.core.model.Service
 import com.hubdeck.app.core.model.HealthSample
+import com.hubdeck.app.ui.service.port.ServiceStore
+import com.hubdeck.app.ui.service.port.TailnetPort
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
