@@ -32,6 +32,8 @@ dependencies {
     implementation(project(":core:data"))
 
     implementation(libs.bundles.core.tailscale)
+    // javax.inject 注解（@Inject / @Singleton）：TailnetRepository 需要，core-tailscale bundle 里没有
+    implementation("javax.inject:javax.inject:1")
 
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)
