@@ -1,6 +1,6 @@
 package com.hubdeck.app.core.data.settings
 
-import androidx.datastore.preferences.core.mutablePreferencesOf
+import androidx.datastore.preferences.core.Preferences
 import com.hubdeck.app.core.model.NetworkContext
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -40,7 +40,7 @@ class SettingsTest {
 
     @Test
     fun `preferences map onto the settings model`() {
-        val preferences = mutablePreferencesOf(
+        val preferences = preferencesOf(
             DataStoreSettingsStore.KEY_HOME_SSID to "MyHomeWiFi",
             DataStoreSettingsStore.KEY_PROBE_INTERVAL_MINUTES to 30,
             DataStoreSettingsStore.KEY_NETWORK_MODE_LOCK to "away",
@@ -59,7 +59,7 @@ class SettingsTest {
 
     @Test
     fun `empty preferences fall back to defaults`() {
-        val settings = mutablePreferencesOf<String>().toSettings()
+        val settings = preferencesOf().toSettings()
 
         assertEquals(HubDeckSettings(), settings)
     }
@@ -84,3 +84,19 @@ class SettingsTest {
         assertEquals("home", yaml.forceNetworkContext)
     }
 }
+
+/**
+ * 构造一个内存里的 [Preferences]。
+ *
+ * 不用 `mutablePreferencesOf`：它在 datastore 1.1.1 里被标记为 `@RestrictTo(LIBRARY_GROUP)`，
+ * 应用侧代码调用会编译失败（2026-11-11 R0 修复：`:core:data` 单测编译不过）。
+ */
+private fun preferencesOf(vararg pairs: Pair<Preferences.Key<*>, Any>): Preferences =
+    object : Preferences {
+        private val values: Map<Preferences.Key<*>, Any> = pairs.toMap()
+
+        @Suppress("UNCHECKED_CAST")
+        override fun <T> get(key: Preferences.Key<T>): T? = values[key] as T?
+
+        override fun asMap(): Map<Preferences.Key<*>, Any> = values
+    }
