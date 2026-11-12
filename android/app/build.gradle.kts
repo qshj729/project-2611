@@ -9,12 +9,12 @@ plugins {
 
 android {
     namespace = "com.hubdeck.app"
-    compileSdk = 35
+    compileSdk = 37
 
-    defaultConfig {
+defaultConfig {
         applicationId = "com.hubdeck.app"
-        minSdk = 26
-        targetSdk = 35
+        minSdk = 34
+        targetSdk = 37
         versionCode = 1
         versionName = "0.1.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
@@ -51,6 +51,9 @@ android {
 
     packaging {
         resources.excludes += setOf("/META-INF/{AL2.0,LGPL2.1}")
+        jniLibs {
+            keepDebugSymbols += "**/libklethron_tsnet.so"
+        }
     }
 }
 
@@ -78,6 +81,7 @@ dependencies {
 
     // 通用依赖走版本目录里的模块级 bundle，版本只在 gradle/libs.versions.toml 维护
     implementation(libs.bundles.app.runtime)
+    implementation(libs.klethron.tsnet)
 
     implementation(platform(libs.compose.bom))
     implementation(libs.bundles.compose.runtime)

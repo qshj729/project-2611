@@ -1,5 +1,5 @@
 [versions]
-agp = "8.7.3"
+agp = "8.10.0"
 kotlin = "2.0.21"
 ksp = "2.0.21-1.0.28"
 composeBom = "2024.12.01"
@@ -22,6 +22,7 @@ androidxJunit = "1.2.1"
 espresso = "3.6.1"
 mockWebServer = "4.12.0"
 coroutines = "1.9.0"
+klethronTsnet = "0.4.0"
 
 [libraries]
 androidx-core-ktx = { module = "androidx.core:core-ktx", version.ref = "coreKtx" }
@@ -59,6 +60,7 @@ work-runtime-ktx = { module = "androidx.work:work-runtime-ktx", version.ref = "w
 coil-compose = { module = "io.coil-kt:coil-compose", version.ref = "coil" }
 coroutines-android = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-android", version.ref = "coroutines" }
 kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "coroutines" }
+klethron-tsnet = { module = "com.klethron:tsnet", version.ref = "klethronTsnet" }
 
 junit = { module = "junit:junit", version.ref = "junit" }
 kotlinx-coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version.ref = "coroutines" }
