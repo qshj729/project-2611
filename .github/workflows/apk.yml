@@ -36,6 +36,8 @@ jobs:
 
       - name: 准备 Android SDK
         uses: android-actions/setup-android@v3
+        with:
+          packages: platforms;android-37 build-tools;37.0.0
 
       - name: 准备 Gradle（缓存依赖与构建缓存）
         uses: gradle/actions/setup-gradle@v3
@@ -46,7 +48,7 @@ jobs:
         # 1) 官方 checksum 校验（wrapper jar 必须与 Gradle 发布的官方产物一致）
         uses: gradle/wrapper-validation-action@v2
         with:
-          gradle-version: '8.9'
+          gradle-version: '8.11.1'
 
       - name: 构建隧道版 Debug APK
         # 与本地 `scripts/build.sh :app:assembleDebug` 完全同命令
