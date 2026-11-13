@@ -3,7 +3,7 @@ package com.hubdeck.app.core.data.settings
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
-import androidx.datastore.preferences.preferencesDataStoreFactory
+import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import com.hubdeck.app.core.model.NetworkContext
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
@@ -16,7 +16,7 @@ import java.io.File
  * 设置项的单测（DataStore 的持久化本身要 Android 运行时，这里测的是**语义**：
  * 默认值、手动锁定模式、序列化）。
  *
- * 使用 `preferencesDataStoreFactory` 创建内存/文件 DataStore，可在纯 JVM 上跑。
+ * 使用 `PreferenceDataStoreFactory` 创建文件型 DataStore，可在纯 JVM 上跑。
  */
 class SettingsTest {
 
@@ -118,5 +118,5 @@ class SettingsTest {
     }
 
     private fun createTestDataStore(): DataStore<Preferences> =
-        preferencesDataStoreFactory.create(File.createTempFile("test", "preferences_pb"))
+        PreferenceDataStoreFactory.create { File.createTempFile("test", "preferences_pb") }
 }
