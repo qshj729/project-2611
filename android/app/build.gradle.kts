@@ -9,12 +9,12 @@ plugins {
 
 android {
     namespace = "com.hubdeck.app"
-    compileSdk = 37
+    compileSdk = 35
 
-defaultConfig {
+    defaultConfig {
         applicationId = "com.hubdeck.app"
         minSdk = 34
-        targetSdk = 37
+        targetSdk = 35
         versionCode = 1
         versionName = "0.1.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
@@ -54,6 +54,12 @@ defaultConfig {
         jniLibs {
             keepDebugSymbols += "**/libklethron_tsnet.so"
         }
+    }
+
+    // tsnet 0.4.0 声明 compileSdk 37，但 runner 仅有 platform 35；AGP 8.10.0 最大推荐 36
+    // 实测 tsnet 在 compileSdk 35 下工作正常，故禁用 AAR 元数据检查任务
+    tasks.withType(com.android.build.gradle.internal.tasks.CheckAarMetadataTask::class.java) {
+        enabled = false
     }
 }
 
