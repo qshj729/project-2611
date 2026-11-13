@@ -38,6 +38,7 @@ jobs:
         uses: android-actions/setup-android@v3
         with:
           packages: platforms;android-37 build-tools;37.0.0
+          accept-android-sdk-licenses: true
 
       - name: 准备 Gradle（缓存依赖与构建缓存）
         uses: gradle/actions/setup-gradle@v3
