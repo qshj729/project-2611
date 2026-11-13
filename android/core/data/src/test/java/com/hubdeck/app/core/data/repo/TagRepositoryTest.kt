@@ -3,6 +3,7 @@ package com.hubdeck.app.core.data.repo
 import com.hubdeck.app.core.data.db.TagEntity
 import com.hubdeck.app.core.model.Tag
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
@@ -37,7 +38,7 @@ class TagRepositoryTest {
             TagEntity(id = "t2", name = "工具"),
         )
 
-        val tags = repository.findAllById(listOf("t1"))
+        val tags = repository.findAllById(listOf("t1")).first()
 
         assertEquals(listOf("t1"), tags.map { it.id })
     }

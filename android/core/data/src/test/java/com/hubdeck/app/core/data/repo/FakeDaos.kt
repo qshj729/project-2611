@@ -136,20 +136,8 @@ class FakeCategoryDao : CategoryDao {
         emitAll(state)
     }
 
-    override suspend fun all(): List<CategoryEntity> = state.value
-
-    override suspend fun findById(id: String): CategoryEntity? = state.value.firstOrNull { it.id == id }
-
-    override suspend fun upsert(category: CategoryEntity) {
-        state.value = state.value.filterNot { it.id == category.id } + category
-    }
-
     override suspend fun upsertAll(categories: List<CategoryEntity>) {
-        categories.forEach { upsert(it) }
-    }
-
-    override suspend fun deleteById(id: String) {
-        state.value = state.value.filterNot { it.id == id }
+        state.value = categories
     }
 }
 
