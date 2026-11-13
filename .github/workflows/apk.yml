@@ -34,19 +34,15 @@ jobs:
           distribution: temurin
           java-version: '17'
 
-      - name: 预接受 Android SDK 许可证
+      - name: 接受 Android SDK 许可证
         run: |
-          mkdir -p /usr/local/lib/android/sdk/licenses
-          echo -e "24333f8a63b6825ea9c5514f83c2829b004d1fee" > /usr/local/lib/android/sdk/licenses/android-sdk-license
-          echo -e "84831b9409646a918e30573bab4c9c91346d8abd" > /usr/local/lib/android/sdk/licenses/android-sdk-preview-license
-          echo -e "8933bad161b41f9b1f7d7d6c6d5c6d5c6d5c6d5c" > /usr/local/lib/android/sdk/licenses/android-googletv-license
-          echo -e "601085b94cd77f0b54ff86406957099ebe79c4d6" > /usr/local/lib/android/sdk/licenses/android-tv-license
-          echo -e "d56f5187479451eabf01fb78af6dfcb131a6481e" > /usr/local/lib/android/sdk/licenses/android-auto-license
+          yes | /usr/local/lib/android/sdk/cmdline-tools/latest/bin/sdkmanager --licenses > /dev/null 2>&1 || true
 
       - name: 准备 Android SDK
         uses: android-actions/setup-android@v3
         with:
           packages: platforms;android-37 build-tools;37.0.0
+          cmdline-tools-version: 'latest'
           accept-android-sdk-licenses: true
 
       - name: 准备 Gradle（缓存依赖与构建缓存）
