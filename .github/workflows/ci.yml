@@ -52,7 +52,7 @@ jobs:
       - name: 校验 Wrapper 与仓库一致 + 列出模块
         run: |
           # 重新生成 wrapper，若与仓库里提交的不一致则 git diff 非空 → 步骤失败
-          ./gradlew wrapper --gradle-version 8.11.1 --gradle-distribution-type bin
+          ./gradlew wrapper --gradle-version 8.11.1
           git diff --exit-code -- gradle/wrapper gradlew gradlew.bat
           # 模块清单（docs/design.md §7.2）
           ./gradlew projects
