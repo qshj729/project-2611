@@ -8,9 +8,11 @@ import com.hubdeck.app.core.data.db.ServiceEntity
 import com.hubdeck.app.core.data.db.EndpointEntity
 import com.hubdeck.app.core.data.db.toDomain
 import com.hubdeck.app.core.model.Category
+import com.hubdeck.app.core.model.Endpoint
 import com.hubdeck.app.core.model.HealthSample
 import com.hubdeck.app.core.model.Service
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import javax.inject.Inject
@@ -30,26 +32,80 @@ class ServiceRepository @Inject constructor(
     private val healthDao: HealthDao,
 ) {
 
+    /**
+     * 服务排序口径（冻结契约 C-02）：置顶优先 → sortIndex 升序 → 名称升序。
+     *
+     * DAO 的 SQL 已经是同样顺序，但单测用的假 DAO 故意不排序，所以仓储这里必须再兜一次。
+     * 不用 `compareValuesBy`：它有 `(a, b, selector)` 重载，多个 lambda 会解析到错误重载。
+     */
+    private val serviceOrder: Comparator<Service> = Comparator { a, b ->
+        val pinned = b.pinned.compareTo(a.pinned)
+        if (pinned != 0) {
+            pinned
+        } else {
+            val index = a.sortIndex.compareTo(b.sortIndex)
+            if (index != 0) index else a.name.compareTo(b.name)
+        }
+    }
+
+    /** 端点排序口径（冻结契约 C-02）：主端点优先 → scope 升序（LAN < TAILNET < PUBLIC）。 */
+    private val endpointOrder: Comparator<Endpoint> = Comparator { a, b ->
+        val primary = b.isPrimary.compareTo(a.isPrimary)
+        if (primary != 0) primary else a.scope.compareTo(b.scope)
+    }
+
     fun observeServices(): Flow<List<Service>> =
         combine(serviceDao.observeAll(), endpointDao.allFlow()) { services, endpoints ->
             val byService = endpoints.groupBy { it.serviceId }
-            services.map { entity ->
-                entity.toDomain(byService[entity.id].orEmpty().map { it.toDomain() })
-            }
-        }
+            services
+                .map { entity ->
+                    entity.toDomain(
+                        byService[entity.id]
+                            .orEmpty()
+                            .map { it.toDomain() }
+                            .sortedWith(endpointOrder)
+                    )
+                }
+                .sortedWith(serviceOrder)
+        }.catch { emit(emptyList()) }
 
     fun observeCategories(): Flow<List<Category>> =
-        categoryDao.observeAll().map { list -> list.map { Category(it.id, it.name, it.color, it.sortIndex) } }
+        categoryDao.observeAll()
+            .map { list ->
+                list.map { Category(it.id, it.name, it.color, it.sortIndex) }
+                    .sortedBy { it.sortIndex }
+            }
+            .catch { emit(emptyList()) }
 
     fun observeHealth(serviceId: String): Flow<List<HealthSample>> =
-        healthDao.observeRecent(serviceId).map { list ->
-            list.map { HealthSample(it.id, it.serviceId, it.endpointId, it.reachable, it.latencyMs, it.checkedAt, it.reason) }
-        }
+        healthDao.observeRecent(serviceId, 50)
+            .map { list ->
+                list.map { sample ->
+                    HealthSample(
+                        id = sample.id,
+                        serviceId = sample.serviceId,
+                        endpointId = sample.endpointId,
+                        reachable = sample.reachable,
+                        latencyMs = sample.latencyMs,
+                        checkedAt = sample.checkedAt,
+                        reason = sample.reason,
+                    )
+                }.sortedByDescending { it.checkedAt }
+            }
+            .catch { emit(emptyList()) }
 
     suspend fun findService(id: String): Service? {
-        val entity = serviceDao.findById(id) ?: return null
-        val endpoints = endpointDao.forService(id).map { it.toDomain() }
-        return entity.toDomain(endpoints)
+        return try {
+            val entity = serviceDao.findById(id)
+            if (entity == null) {
+                null
+            } else {
+                val endpoints = endpointDao.forService(id).map { it.toDomain() }
+                entity.toDomain(endpoints)
+            }
+        } catch (error: Exception) {
+            null
+        }
     }
 
     suspend fun upsert(service: Service) {
@@ -76,7 +132,7 @@ class ServiceRepository @Inject constructor(
             service.endpoints.map { endpoint ->
                 EndpointEntity(
                     id = endpoint.id,
-                    serviceId = service.id,
+                    serviceId = endpoint.serviceId,
                     scope = endpoint.scope.name,
                     urlTemplate = endpoint.urlTemplate,
                     host = endpoint.host,
@@ -84,7 +140,7 @@ class ServiceRepository @Inject constructor(
                     isPrimary = endpoint.isPrimary,
                     note = endpoint.note,
                 )
-            },
+            }
         )
     }
 
@@ -100,7 +156,7 @@ class ServiceRepository @Inject constructor(
                 latencyMs = sample.latencyMs,
                 checkedAt = sample.checkedAt,
                 reason = sample.reason,
-            ),
+            )
         )
     }
 
@@ -108,8 +164,15 @@ class ServiceRepository @Inject constructor(
         val entities = serviceDao.search(query)
         val endpoints = endpointDao.forServices(entities.map { it.id })
         val byService = endpoints.groupBy { it.serviceId }
-        return entities.map { entity ->
-            entity.toDomain(byService[entity.id].orEmpty().map { it.toDomain() })
-        }
+        return entities
+            .map { entity ->
+                entity.toDomain(
+                    byService[entity.id]
+                        .orEmpty()
+                        .map { it.toDomain() }
+                        .sortedWith(endpointOrder)
+                )
+            }
+            .sortedWith(serviceOrder)
     }
 }
