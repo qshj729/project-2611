@@ -118,5 +118,5 @@ class SettingsTest {
     }
 
     private fun createTestDataStore(): DataStore<Preferences> =
-        PreferenceDataStoreFactory.create { File.createTempFile("test", "preferences_pb") }
+        PreferenceDataStoreFactory.create { File.createTempFile("test", ".preferences_pb") }
 }
