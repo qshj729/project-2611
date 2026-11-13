@@ -69,9 +69,15 @@ jobs:
           fi
 
       - name: 构建 + 单测 + Lint
-        # 与本地 `scripts/build.sh :app:assembleDebug :app:testDebugUnitTest :app:lintDebug` 完全同命令
+        # testDebugUnitTest 用聚合写法：会跑所有模块的单测任务。
+        # 不要再写成 :app:testDebugUnitTest —— 测试已搬到模块内，那个任务是 NO-SOURCE，
+        # 会造成「绿灯但单测没跑」（2026-11-13 实测，见 scripts/ci-verify-tests.sh）。
         working-directory: .
-        run: scripts/build.sh :app:assembleDebug :app:testDebugUnitTest :app:lintDebug
+        run: scripts/build.sh :app:assembleDebug testDebugUnitTest :app:lintDebug
+
+      - name: 校验单测真的执行了（防 NO-SOURCE 假绿）
+        working-directory: .
+        run: bash scripts/ci-verify-tests.sh
 
       - name: 上传 debug APK
         uses: actions/upload-artifact@v4
@@ -86,6 +92,6 @@ jobs:
         with:
           name: hubdeck-reports
           path: |
-            android/app/build/reports/tests/testDebugUnitTest/
+            android/**/build/reports/tests/testDebugUnitTest/
             android/app/build/reports/lint-results-debug.html
           if-no-files-found: warn

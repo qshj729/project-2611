@@ -56,14 +56,18 @@ object HomarrImporter {
             name to (group.id ?: name)
         }
 
+        // Build a map from item index to approximate line number for better error reporting
+        val itemLineNumbers = findItemLineNumbers(yamlText)
+
         val services = config.items.mapIndexedNotNull { index, item ->
             val url = item.url.trim()
+            val lineInfo = itemLineNumbers.getOrDefault(index, index + 1).let { "第 $it 行" }
             if (url.isEmpty()) {
-                warnings += "第 ${index + 1} 项缺少 url，已跳过"
+                warnings += "$lineInfo 缺少 url，已跳过"
                 return@mapIndexedNotNull null
             }
             if (!url.startsWith("http://") && !url.startsWith("https://")) {
-                warnings += "第 ${index + 1} 项的 url 不是 http(s)（$url），已跳过"
+                warnings += "$lineInfo 的 url 不是 http(s)（$url），已跳过"
                 return@mapIndexedNotNull null
             }
             val serviceId = UUID.randomUUID().toString()
@@ -94,6 +98,41 @@ object HomarrImporter {
         }
 
         return ImportResult(services = services, categories = categories, warnings = warnings)
+    }
+
+    /** Attempts to find the starting line number for each item in the `items` array. */
+    private fun findItemLineNumbers(yamlText: String): Map<Int, Int> {
+        val lines = yamlText.lines()
+        val result = mutableMapOf<Int, Int>()
+        var inItems = false
+        var currentItemIndex = -1
+        var itemStartLine = -1
+
+        for ((lineIndex, line) in lines.withIndex()) {
+            val trimmed = line.trim()
+            if (trimmed == "items:") {
+                inItems = true
+                continue
+            }
+            if (inItems) {
+                // Detect new item start (lines starting with "- " at the same indent level)
+                if (trimmed.startsWith("- ")) {
+                    if (currentItemIndex >= 0) {
+                        result[currentItemIndex] = itemStartLine
+                    }
+                    currentItemIndex++
+                    itemStartLine = lineIndex + 1 // 1-based line number
+                } else if (trimmed.isNotEmpty() && !trimmed.startsWith("#") && !line.startsWith("  ") && !line.startsWith("\t")) {
+                    // Left the items array
+                    break
+                }
+            }
+        }
+        // Don't forget the last item
+        if (currentItemIndex >= 0) {
+            result[currentItemIndex] = itemStartLine
+        }
+        return result
     }
 
     private fun iconKindOf(icon: String?): IconKind = when {

@@ -34,7 +34,8 @@ fi
 echo "→ 取得构建锁 $BUILD_LOCK"
 
 if [ "$#" -eq 0 ]; then
-  set -- :app:assembleDebug :app:testDebugUnitTest
+  # 用聚合写法跑所有模块的单测；:app:testDebugUnitTest 是 NO-SOURCE（假绿）
+  set -- :app:assembleDebug testDebugUnitTest
 fi
 
 cd "$REPO_ROOT/android"
