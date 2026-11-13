@@ -1,33 +1,51 @@
 #!/usr/bin/env bash
-# HubDeck 共享构建环境
+# HubDeck 构建环境（CI 优先）
 #
-# 本仓库所在的执行环境没有系统级 JDK / Android SDK / Gradle。
-# 2026-11-10 起工具链安装在 ~/.cache/hubdeck-toolchain/，任何 agent 都可以直接
-# `source scripts/hubdeck-env.sh` 后使用 java / gradle / sdkmanager。
+# 2026-11-13 CEO / 老板决策：**本地编译环境已下线**。
+#   - 本机不再安装 JDK / Android SDK / Gradle 缓存（~/.cache/hubdeck-toolchain 已删除）。
+#   - 所有构建、单测、Lint、界面截图一律在 GitHub Actions 上跑：
+#       .github/workflows/ci.yml         —— 构建 + 单测 + Lint（PR 与 main push）
+#       .github/workflows/apk.yml        —— 隧道版 APK（tag / 手动触发）
+#       .github/workflows/ci-emulator.yml—— 模拟器启动 + 截图取证（通道 E）
+#   - 本机仍可执行本脚本的前提是「环境变量已经由 CI 注入」；
+#     缺 JDK / SDK 时这里直接报错退出，不做本机兜底安装。
 #
-# 用法:
+# CI 环境变量来源：
+#   JAVA_HOME         actions/setup-java（temurin 17）
+#   ANDROID_HOME      actions/setup-android（platform 35 / build-tools 35.0.0）
+#   GRADLE_USER_HOME  gradle/actions/setup-gradle
+#
+# 用法（仅 CI 内有效）：
 #   source scripts/hubdeck-env.sh
 #   cd android && ./gradlew :app:assembleDebug
-#
-# 环境变量:
-#   JAVA_HOME       JDK 17
-#   ANDROID_HOME    Android SDK (platform 35 / build-tools 34+35)
-#   GRADLE_USER_HOME  Gradle 依赖缓存 (~/.cache/hubdeck-toolchain/gradle-home)
-#   PATH            追加 JDK bin、Android SDK platform-tools、cmdline-tools
 
-HUBDECK_TOOLCHAIN="${HUBDECK_TOOLCHAIN:-$HOME/.cache/hubdeck-toolchain}"
+set -euo pipefail
 
-# CI 环境变量优先、本机兜底：runner 上已由 setup-java/setup-android 注入标准路径
-if [ -z "${JAVA_HOME:-}" ] || [ ! -d "$JAVA_HOME" ]; then export JAVA_HOME="$HUBDECK_TOOLCHAIN/jdk"; fi
-if [ -z "${ANDROID_HOME:-}" ] || [ ! -d "$ANDROID_HOME" ]; then export ANDROID_HOME="$HUBDECK_TOOLCHAIN/android-sdk"; fi
-if [ -z "${ANDROID_SDK_ROOT:-}" ] || [ ! -d "$ANDROID_SDK_ROOT" ]; then export ANDROID_SDK_ROOT="$ANDROID_HOME"; fi
-if [ -z "${GRADLE_USER_HOME:-}" ] || [ ! -d "$GRADLE_USER_HOME" ]; then export GRADLE_USER_HOME="$HUBDECK_TOOLCHAIN/gradle-home"; fi
+if [ -z "${JAVA_HOME:-}" ] || [ ! -d "${JAVA_HOME:-}" ]; then
+  cat >&2 <<'EOF'
+❌ 本机没有 JDK：本地编译已于 2026-11-13 停用（~/.cache/hubdeck-toolchain 已删除）。
+   请走 GitHub Actions：push 分支 → 开 PR → 看 Actions 结果。
+   本地需要跑单步命令时，用 GitHub Actions 的 workflow_dispatch 触发。
+EOF
+  exit 2
+fi
 
-# PATH 追加：仅在目录存在时追加，避免污染 CI runner 的标准 PATH
+if [ -z "${ANDROID_HOME:-}" ] || [ ! -d "${ANDROID_HOME:-}" ]; then
+  cat >&2 <<'EOF'
+❌ 没有 ANDROID_HOME：本地编译已于 2026-11-13 停用。
+   请走 GitHub Actions：.github/workflows/ci.yml（构建 + 单测 + Lint）
+                        .github/workflows/ci-emulator.yml（模拟器截图取证）
+EOF
+  exit 2
+fi
+
+export ANDROID_SDK_ROOT="${ANDROID_SDK_ROOT:-$ANDROID_HOME}"
+export GRADLE_USER_HOME="${GRADLE_USER_HOME:-$HOME/.gradle}"
+
+# PATH 追加（CI runner 上这些目录都已存在）
 if [ -d "$JAVA_HOME/bin" ]; then export PATH="$JAVA_HOME/bin:$PATH"; fi
 if [ -d "$ANDROID_HOME/platform-tools" ]; then export PATH="$ANDROID_HOME/platform-tools:$PATH"; fi
 if [ -d "$ANDROID_HOME/cmdline-tools/latest/bin" ]; then export PATH="$ANDROID_HOME/cmdline-tools/latest/bin:$PATH"; fi
-# build-tools 版本可能不同，取最新存在的
 if [ -d "$ANDROID_HOME/build-tools" ]; then
   LATEST_BT=$(ls -1 "$ANDROID_HOME/build-tools" 2>/dev/null | sort -V | tail -1)
   if [ -n "$LATEST_BT" ] && [ -d "$ANDROID_HOME/build-tools/$LATEST_BT" ]; then
@@ -36,8 +54,3 @@ if [ -d "$ANDROID_HOME/build-tools" ]; then
 fi
 if [ -d "$ANDROID_HOME/emulator" ]; then export PATH="$PATH:$ANDROID_HOME/emulator"; fi
 if [ -d "$HOME/.local/bin" ]; then export PATH="$PATH:$HOME/.local/bin"; fi
-
-# 2026-11-11 起工具链已含 emulator 37.3.8 + system-image（android-34 google_apis x86_64），
-# 本地模拟器（通道 D）可用；真机走 adb（通道 A），limrun 云模拟器走 lim（通道 B，需要 LIM_API_KEY）。
-# 注意：本机 /dev/kvm 属 root:kvm，用户不在 kvm 组时模拟器需 TCG 软模拟
-#（ANDROID_I_WANT_MY_TCG=yes -accel off），启动极慢且与构建抢资源，构建期间先停模拟器。

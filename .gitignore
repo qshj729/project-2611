@@ -16,5 +16,7 @@ captures/
 .DS_Store
 Thumbs.db
 
-# 设备验收截图（本地产物，证据走附件/文档）
+# 本地产物（CI artifact / 设备验收截图，不进版本库）
+.build-logs/
+emulator-evidence/
 docs/shots/
