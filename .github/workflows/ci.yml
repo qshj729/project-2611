@@ -54,10 +54,19 @@ jobs:
       - name: 校验 Wrapper 与仓库一致 + 列出模块
         run: |
           # 重新生成 wrapper，若与仓库里提交的不一致则 git diff 非空 → 步骤失败
-          ./gradlew wrapper --gradle-version 8.11.1
+          # 网络抖动（插件仓库解析失败、缓存服务 400）会让这一个步骤随机变红，
+          # 2026-11-13 实测 run 43416506396 因此假红 → 这里只对该步骤重试 3 次。
+          ok=0
+          for attempt in 1 2 3; do
+            if ./gradlew wrapper --gradle-version 8.11.1 && ./gradlew projects; then
+              ok=1
+              break
+            fi
+            echo "::warning::gradle 解析失败（第 $attempt 次），10 秒后重试"
+            sleep 10
+          done
+          [ "$ok" = "1" ] || exit 1
           git diff --exit-code -- gradle/wrapper gradlew gradlew.bat
-          # 模块清单（docs/design.md §7.2）
-          ./gradlew projects
 
       - name: 校验 :core:model 是纯 Kotlin 模块（不依赖 Android SDK）
         run: |

@@ -40,11 +40,46 @@ fi
 
 cd "$REPO_ROOT/android"
 
-echo "→ gradle $* (log: $LOG_FILE)"
-set +e
-./gradlew "$@" --max-workers=2 2>&1 | tee "$LOG_FILE"
-STATUS="${PIPESTATUS[0]}"
-set -e
+# GitHub Actions 的 runner 是独占的 7GB 机器，R8 合并 dex 需要比 1g 更大的堆；
+# 本机（Paperclip 宿主机只有 5.9GB、还要跑数据库与 agent 进程）保持 gradle.properties 里的 1g 上限。
+# 2026-11-13 实测：CI runner 上 1g 堆会让 :app:mergeExtDexDebug 抛 OutOfMemoryError
+# （run 43414013454，模拟器取证工作流因此假红）。这里只在 GitHub Actions 里放宽。
+GRADLE_JVM_ARGS_OVERRIDE=""
+if [ "${GITHUB_ACTIONS:-}" = "true" ]; then
+  GRADLE_JVM_ARGS_OVERRIDE="${HUBDECK_GRADLE_JVM_ARGS:--Xmx2g -XX:MaxMetaspaceSize=512m -Dfile.encoding=UTF-8}"
+fi
+
+# 重试策略：只对「网络 / 缓存抖动」这类瞬时失败重试，真实编译错一次就判失败。
+# 2026-11-13 实测两例同源假红：GitHub 缓存服务返回 400、插件仓库解析失败
+# （run 43416506396：KSP 插件 could not resolve；run 43414013454：R8 OOM）。
+RETRYABLE_PATTERN='could not resolve|Cache service responded with 400|Read timed out|Connection reset|Could not GET|Could not HEAD|Premature end of Content-Length'
+MAX_ATTEMPTS="${HUBDECK_BUILD_MAX_ATTEMPTS:-3}"
+attempt=1
+STATUS=1
+while : ; do
+  echo "→ gradle $* (第 $attempt 次, log: $LOG_FILE)"
+  set +e
+  if [ -n "$GRADLE_JVM_ARGS_OVERRIDE" ]; then
+    ./gradlew "$@" --max-workers=2 "-Dorg.gradle.jvmargs=$GRADLE_JVM_ARGS_OVERRIDE" 2>&1 | tee "$LOG_FILE"
+  else
+    ./gradlew "$@" --max-workers=2 2>&1 | tee "$LOG_FILE"
+  fi
+  STATUS="${PIPESTATUS[0]}"
+  set -e
+  if [ "$STATUS" -eq 0 ]; then
+    break
+  fi
+  if [ "$attempt" -ge "$MAX_ATTEMPTS" ]; then
+    break
+  fi
+  if ! grep -Eq "$RETRYABLE_PATTERN" "$LOG_FILE"; then
+    echo "→ 失败原因不是网络抖动，按真实失败处理，不重试" >&2
+    break
+  fi
+  echo "→ 命中网络抖动特征，10 秒后重试（第 $attempt 次）" >&2
+  attempt=$((attempt + 1))
+  sleep 10
+done
 
 if [ "$STATUS" -eq 0 ]; then
   echo "→ BUILD OK: $LOG_FILE"
