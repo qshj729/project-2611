@@ -34,6 +34,9 @@ jobs:
           distribution: temurin
           java-version: '17'
 
+      - name: 接受 Android SDK 许可证
+        run: yes | sudo /usr/local/lib/android/sdk/cmdline-tools/latest/bin/sdkmanager --licenses || true
+
       - name: 准备 Android SDK
         uses: android-actions/setup-android@v3
         with:
