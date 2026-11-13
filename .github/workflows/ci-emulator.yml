@@ -1,0 +1,107 @@
+name: CI Emulator
+
+# 通道 E：GitHub Actions 里的 Android 模拟器（唯一设备通道）。
+# 2026-11-13 CEO 决策：本地编译环境已下线，本仓库不再在本机构建，
+# 构建 / 单测 / Lint / 界面截图全部以本仓库的 Actions 结果为准。
+#
+# 产物（artifact）就是验收证据：
+#   hubdeck-emulator-apk     —— 被测 APK
+#   hubdeck-emulator-shots   —— 截图 + UI 树 + logcat
+#   hubdeck-build-logs       —— 构建日志
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches: ["**"]
+    paths:
+      - "android/**"
+      - "scripts/**"
+      - ".github/workflows/ci-emulator.yml"
+  push:
+    branches: [main]
+    paths:
+      - "android/**"
+      - "scripts/**"
+      - ".github/workflows/ci-emulator.yml"
+
+# 同一分支的新 push 取消旧 run
+concurrency:
+  group: ci-emulator-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  emulator:
+    name: 模拟器启动 + 截图取证
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    defaults:
+      run:
+        working-directory: android
+
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 准备 JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: 准备 Android SDK
+        uses: android-actions/setup-android@v3
+        with:
+          packages: platforms;android-35 build-tools;35.0.0
+          cmdline-tools-version: 'latest'
+          accept-android-sdk-licenses: true
+
+      - name: 准备 Gradle（缓存依赖与构建缓存）
+        uses: gradle/actions/setup-gradle@v3
+        with:
+          working-directory: android
+
+      - name: 校验 Gradle Wrapper
+        uses: gradle/wrapper-validation-action@v2
+        with:
+          gradle-version: '8.11.1'
+          allow-checksums: '2db75c40782f5e8ba1fc278a5574bab070adccb2d21ca5a6e5ed840888448046'
+
+      - name: 构建 Debug APK（唯一构建入口）
+        working-directory: .
+        run: scripts/build.sh :app:assembleDebug
+
+      - name: 上传构建日志
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: hubdeck-build-logs
+          path: .build-logs/
+          if-no-files-found: warn
+
+      - name: 启动模拟器并取证
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          arch: x86_64
+          profile: pixel_6
+          disable-animations: true
+          script: scripts/ci-emulator-probe.sh
+
+      - name: 收集截图 / UI 树 / logcat
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: hubdeck-emulator-shots
+          path: emulator-evidence/
+          if-no-files-found: warn
+
+      - name: 上传被测 APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: hubdeck-emulator-apk
+          path: android/app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error

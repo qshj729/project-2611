@@ -1,0 +1,71 @@
+name: Build Tunnel APK
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - 'v*'
+
+# 只读仓库，不需要写权限
+permissions:
+  contents: read
+
+# 同一 tag / 分支的新 push 取消旧 run
+concurrency:
+  group: apk-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: 构建隧道版 Debug APK
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        # Gradle 工程在 android/ 下，所有 gradle 命令都从这里跑
+        working-directory: android
+
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 准备 JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: 接受 Android SDK 许可证
+        run: |
+          yes | /usr/local/lib/android/sdk/cmdline-tools/latest/bin/sdkmanager --licenses > /dev/null 2>&1 || true
+
+      - name: 准备 Android SDK
+        uses: android-actions/setup-android@v3
+        with:
+          packages: platforms;android-35 build-tools;35.0.0
+          cmdline-tools-version: 'latest'
+          accept-android-sdk-licenses: true
+
+      - name: 准备 Gradle（缓存依赖与构建缓存）
+        uses: gradle/actions/setup-gradle@v3
+        with:
+          working-directory: android
+
+      - name: 校验 Gradle Wrapper
+        # 1) 官方 checksum 校验（wrapper jar 必须与 Gradle 发布的官方产物一致）
+        # 2) 允许本地 wrapper jar sha256（Gradle 8.11.1 官方库暂未收录该版本 wrapper 校验和）
+        uses: gradle/wrapper-validation-action@v2
+        with:
+          gradle-version: '8.11.1'
+          allow-checksums: '2db75c40782f5e8ba1fc278a5574bab070adccb2d21ca5a6e5ed840888448046'
+
+      - name: 构建隧道版 Debug APK
+        # 与本地 `scripts/build.sh :app:assembleDebug` 完全同命令
+        working-directory: .
+        run: scripts/build.sh :app:assembleDebug
+
+      - name: 上传隧道版 debug APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: hubdeck-tunnel-debug-apk
+          path: android/app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error

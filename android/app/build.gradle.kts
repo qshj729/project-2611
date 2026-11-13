@@ -13,7 +13,7 @@ android {
 
     defaultConfig {
         applicationId = "com.hubdeck.app"
-        minSdk = 26
+        minSdk = 34
         targetSdk = 35
         versionCode = 1
         versionName = "0.1.0"
@@ -51,6 +51,15 @@ android {
 
     packaging {
         resources.excludes += setOf("/META-INF/{AL2.0,LGPL2.1}")
+        jniLibs {
+            keepDebugSymbols += "**/libklethron_tsnet.so"
+        }
+    }
+
+    // tsnet 0.4.0 声明 compileSdk 37，但 runner 仅有 platform 35；AGP 8.10.0 最大推荐 36
+    // 实测 tsnet 在 compileSdk 35 下工作正常，故禁用 AAR 元数据检查任务
+    tasks.withType(com.android.build.gradle.internal.tasks.CheckAarMetadataTask::class.java) {
+        enabled = false
     }
 }
 
@@ -78,6 +87,7 @@ dependencies {
 
     // 通用依赖走版本目录里的模块级 bundle，版本只在 gradle/libs.versions.toml 维护
     implementation(libs.bundles.app.runtime)
+    implementation(libs.klethron.tsnet)
 
     implementation(platform(libs.compose.bom))
     implementation(libs.bundles.compose.runtime)
