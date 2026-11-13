@@ -5,7 +5,6 @@ import com.hubdeck.app.core.data.db.TagEntity
 import com.hubdeck.app.core.model.Tag
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
-import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -21,7 +20,7 @@ class TagRepository @Inject constructor(
 
     /** 观察所有标签。 */
     fun observeAll(): Flow<List<Tag>> =
-        tagDao.all().map { entities -> entities.map { it.toDomain() } }
+        flow { emit(tagDao.all().map { it.toDomain() }) }
 
     /** 按 ID 批量查询。 */
     fun findAllById(ids: List<String>): Flow<List<Tag>> =
