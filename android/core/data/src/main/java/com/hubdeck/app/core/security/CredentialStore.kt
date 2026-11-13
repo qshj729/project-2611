@@ -6,6 +6,7 @@ import android.security.keystore.KeyProperties
 import android.util.Base64
 import com.hubdeck.app.core.data.db.CredentialDao
 import com.hubdeck.app.core.data.db.CredentialEntity
+import java.nio.charset.Charsets
 import java.security.KeyStore
 import javax.crypto.Cipher
 import javax.crypto.KeyGenerator
@@ -24,6 +25,14 @@ interface SecretProvider {
     suspend fun localApiSecret(): String?
     suspend fun controlPlaneToken(): String?
 }
+
+/** Domain model for a stored credential (no cipher text exposed). */
+data class Credential(
+    val id: String,
+    val label: String,
+    val kind: String,
+    val createdAt: Long,
+)
 
 class CredentialStore(
     private val context: Context,
@@ -52,7 +61,8 @@ class CredentialStore(
 
     suspend fun delete(id: String) = credentialDao.deleteById(id)
 
-    suspend fun list(): List<CredentialEntity> = credentialDao.all()
+    /** Returns domain credentials (no sensitive cipher text). */
+    suspend fun list(): List<Credential> = credentialDao.all().map { it.toDomain() }
 
     private suspend fun readByKind(kind: String): String? {
         val entry = credentialDao.all().firstOrNull { it.kind == kind } ?: return null
@@ -93,3 +103,10 @@ class CredentialStore(
         private const val TRANSFORMATION = "AES/GCM/NoPadding"
     }
 }
+
+internal fun CredentialEntity.toDomain(): Credential = Credential(
+    id = id,
+    label = label,
+    kind = kind,
+    createdAt = createdAt,
+)

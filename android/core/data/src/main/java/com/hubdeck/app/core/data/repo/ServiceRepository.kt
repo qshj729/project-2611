@@ -103,4 +103,13 @@ class ServiceRepository @Inject constructor(
             ),
         )
     }
+
+    suspend fun searchServices(query: String): List<Service> {
+        val entities = serviceDao.search(query)
+        val endpoints = endpointDao.forServices(entities.map { it.id })
+        val byService = endpoints.groupBy { it.serviceId }
+        return entities.map { entity ->
+            entity.toDomain(byService[entity.id].orEmpty().map { it.toDomain() })
+        }
+    }
 }
