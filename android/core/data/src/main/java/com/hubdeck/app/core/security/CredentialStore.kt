@@ -6,7 +6,7 @@ import android.security.keystore.KeyProperties
 import android.util.Base64
 import com.hubdeck.app.core.data.db.CredentialDao
 import com.hubdeck.app.core.data.db.CredentialEntity
-import java.nio.charset.Charsets
+import kotlin.text.Charsets
 import java.security.KeyStore
 import javax.crypto.Cipher
 import javax.crypto.KeyGenerator

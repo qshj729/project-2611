@@ -4,6 +4,7 @@ import com.hubdeck.app.core.data.db.TagDao
 import com.hubdeck.app.core.data.db.TagEntity
 import com.hubdeck.app.core.model.Tag
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -23,8 +24,8 @@ class TagRepository @Inject constructor(
         tagDao.all().map { entities -> entities.map { it.toDomain() } }
 
     /** 按 ID 批量查询。 */
-    suspend fun findAllById(ids: List<String>): List<Tag> =
-        tagDao.all().filter { it.id in ids }.map { it.toDomain() }
+    fun findAllById(ids: List<String>): Flow<List<Tag>> =
+        flow { emit(tagDao.all().filter { it.id in ids }.map { it.toDomain() }) }
 
     /** 创建或更新标签。 */
     suspend fun upsert(tag: Tag) {
