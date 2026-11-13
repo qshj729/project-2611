@@ -52,9 +52,9 @@ class ServiceRepositoryTest {
     fun `observeServices sorts endpoints by primary first then scope`() = runTest {
         serviceDao.seed(entity(id = "a"))
         endpointDao.seed(
-            endpoint(id = "e3", serviceId = "a", scope = EndpointScope.PUBLIC, primary = false),
-            endpoint(id = "e1", serviceId = "a", scope = EndpointScope.PUBLIC, primary = true),
-            endpoint(id = "e2", serviceId = "a", scope = EndpointScope.LAN, primary = false),
+            endpointEntity(id = "e3", serviceId = "a", scope = EndpointScope.PUBLIC, primary = false),
+            endpointEntity(id = "e1", serviceId = "a", scope = EndpointScope.PUBLIC, primary = true),
+            endpointEntity(id = "e2", serviceId = "a", scope = EndpointScope.LAN, primary = false),
         )
 
         val service = repository.observeServices().first().single()
@@ -94,8 +94,8 @@ class ServiceRepositoryTest {
     @Test
     fun `observeHealth returns newest first and caps at fifty`() = runTest {
         healthDao.seed(
-            HealthSampleEntity(id = 1, serviceId = "a", endpointId = "e", reachable = true, latencyMs = 10, checkedAt = 100),
-            HealthSampleEntity(id = 2, serviceId = "a", endpointId = "e", reachable = false, latencyMs = null, checkedAt = 200),
+            HealthSampleEntity(id = 1, serviceId = "a", endpointId = "e", reachable = true, latencyMs = 10, checkedAt = 100, reason = null),
+            HealthSampleEntity(id = 2, serviceId = "a", endpointId = "e", reachable = false, latencyMs = null, checkedAt = 200, reason = null),
         )
 
         val samples = repository.observeHealth("a").first()
@@ -115,7 +115,7 @@ class ServiceRepositoryTest {
     @Test
     fun `findService returns the service with its endpoints`() = runTest {
         serviceDao.seed(entity(id = "a"))
-        endpointDao.seed(endpoint(id = "e1", serviceId = "a"))
+        endpointDao.seed(endpointEntity(id = "e1", serviceId = "a"))
 
         val service = repository.findService("a")
 
@@ -138,7 +138,7 @@ class ServiceRepositoryTest {
 
     @Test
     fun `upsert deletes endpoints before inserting them`() = runTest {
-        endpointDao.seed(endpoint(id = "old", serviceId = "a"))
+        endpointDao.seed(endpointEntity(id = "old", serviceId = "a"))
 
         repository.upsert(domainService(id = "a", endpoints = listOf(endpoint(id = "new", serviceId = "a"))))
 
@@ -205,6 +205,22 @@ class ServiceRepositoryTest {
     )
 
     private fun endpoint(
+        id: String,
+        serviceId: String,
+        scope: EndpointScope = EndpointScope.LAN,
+        primary: Boolean = false,
+    ) = Endpoint(
+        id = id,
+        serviceId = serviceId,
+        scope = scope,
+        urlTemplate = "{host}",
+        host = "example.local",
+        port = null,
+        isPrimary = primary,
+        note = null,
+    )
+
+    private fun endpointEntity(
         id: String,
         serviceId: String,
         scope: EndpointScope = EndpointScope.LAN,
