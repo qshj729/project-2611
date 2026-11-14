@@ -30,7 +30,6 @@ include(":feature:dashboard")
 include(":feature:service")
 include(":feature:settings")
 include(":feature:tailscale")
-include(":feature:browser")
 
 // 基准测试占位（docs/design.md §7.2；macrobenchmark 插件在 M4 接入）
 include(":benchmark")
