@@ -3,7 +3,7 @@ package com.hubdeck.app
 import android.content.Context
 import android.util.Log
 import com.klethron.tsnet.TailnetNode
-import java.io.FileDescriptor
+import java.io.IOException
 import java.net.InetAddress
 import java.net.ServerSocket
 import java.net.Socket
@@ -12,8 +12,6 @@ import java.time.Duration
 import java.util.concurrent.Executors
 import java.util.concurrent.ThreadPoolExecutor
 import java.util.concurrent.TimeUnit
-import android.system.Os
-import android.system.OsConstants
 
 /**
  * Local proxy server that listens on 127.0.0.1:1080.
@@ -29,6 +27,13 @@ import android.system.OsConstants
  *
  * This fixes the previous behavior where non-CONNECT requests returned
  * a fixed "Proxy operational — tsnet tunnel pending" response.
+ *
+ * tsnet 0.14.0 API: uses socket-based forwarding model.
+ * - Old (0.4.0): `node.dial(host, port, timeout)` → ParcelFileDescriptor → Os.read/write
+ * - New (0.14.0): `node.connect(host, port)` → Socket → socket.inputStream/outputStream
+ *   Retained methods: start, awaitStatus, login, logout, close, controlUrl
+ *   Removed: dial, nativeDial
+ *   New: open, connect, bind, fromSocket, localBridge, nativeSetRoots
  */
 class LocalProxyServer {
 
@@ -152,9 +157,8 @@ class LocalProxyServer {
         }
 
         try {
-            // Dial through tsnet to the target
-            val pfd = node.dial(host, port, Duration.ofSeconds(30))
-            val fd = pfd.fileDescriptor
+            // Connect through tsnet to the target (tsnet 0.14.0 API: connect returns Socket)
+            val tunnelSocket = node.connect(host, port)
 
             // Send 200 Connection Established
             val response = "HTTP/1.1 200 Connection Established\r\n\r\n"
@@ -162,10 +166,10 @@ class LocalProxyServer {
             outputStream.flush()
 
             // Forward data between WebView socket and tsnet tunnel
-            forwardThroughTunnel(socket, fd)
+            forwardBidirectional(socket, tunnelSocket)
 
         } catch (e: Exception) {
-            Log.e(TAG, "CONNECT dial failed for $host:$port", e)
+            Log.e(TAG, "CONNECT connect failed for $host:$port", e)
             sendErrorResponse(outputStream, 502, "Bad Gateway", "Failed to connect to target: ${e.message}")
         }
     }
@@ -212,30 +216,41 @@ class LocalProxyServer {
         outputStream: java.io.OutputStream,
         node: TailnetNode,
     ) {
+        var tunnelSocket: Socket? = null
         try {
-            val pfd = node.dial(targetHost, targetPort, Duration.ofSeconds(30))
-            val fd = pfd.fileDescriptor
+            // Connect through tsnet (tsnet 0.14.0 API: connect returns Socket)
+            tunnelSocket = node.connect(targetHost, targetPort)
+
+            val tunnelOut = tunnelSocket.outputStream
+            val tunnelIn = tunnelSocket.inputStream
 
             // Send request line
             val requestLine = "$method $requestTarget HTTP/1.1\r\n"
-            Os.write(fd, requestLine.toByteArray(), 0, requestLine.length)
+            tunnelOut.write(requestLine.toByteArray())
 
             // Send Host header if not present in requestTarget
             if (!requestTarget.startsWith("http")) {
                 val hostHeader = "Host: $targetHost:$targetPort\r\n"
-                Os.write(fd, hostHeader.toByteArray(), 0, hostHeader.length)
+                tunnelOut.write(hostHeader.toByteArray())
             }
 
             // Send Connection: close to ensure server closes after response
             val closeHeader = "Connection: close\r\n\r\n"
-            Os.write(fd, closeHeader.toByteArray(), 0, closeHeader.length)
+            tunnelOut.write(closeHeader.toByteArray())
+            tunnelOut.flush()
 
             // Now forward bidirectionally
-            forwardThroughTunnel(socket, fd)
+            forwardBidirectional(socket, tunnelSocket!!)
 
         } catch (e: Exception) {
             Log.e(TAG, "HTTP tunnel forward failed for $targetHost:$targetPort", e)
             sendErrorResponse(outputStream, 502, "Bad Gateway", "Tunnel error: ${e.message}")
+        } finally {
+            try {
+                tunnelSocket?.close()
+            } catch (e: Exception) {
+                // Ignore
+            }
         }
     }
 
@@ -285,10 +300,6 @@ class LocalProxyServer {
         }
     }
 
-    private fun forwardThroughTunnel(clientSocket: Socket, tunnelFd: FileDescriptor) {
-        forwardBidirectionalFd(clientSocket, tunnelFd)
-    }
-
     private fun forwardBidirectional(clientSocket: Socket, targetSocket: Socket) {
         val clientIn = clientSocket.inputStream
         val clientOut = clientSocket.outputStream
@@ -320,47 +331,6 @@ class LocalProxyServer {
                 }
             } catch (e: Exception) {
                 Log.d(TAG, "Forward Target→Client error", e)
-            }
-        })
-
-        t1.start()
-        t2.start()
-        try {
-            t1.join()
-            t2.join()
-        } catch (e: InterruptedException) {
-            // Ignore
-        }
-    }
-
-    private fun forwardBidirectionalFd(clientSocket: Socket, tunnelFd: FileDescriptor) {
-        val clientIn = clientSocket.inputStream
-        val clientOut = clientSocket.outputStream
-
-        val t1 = Thread({
-            try {
-                val buf = ByteArray(8192)
-                while (running) {
-                    val bytesRead = Os.read(tunnelFd, buf, 0, buf.size)
-                    if (bytesRead < 0) break
-                    clientOut.write(buf, 0, bytesRead)
-                    clientOut.flush()
-                }
-            } catch (e: Exception) {
-                Log.d(TAG, "Forward Tunnel→Client error", e)
-            }
-        })
-
-        val t2 = Thread({
-            try {
-                val buf = ByteArray(8192)
-                while (running) {
-                    val bytesRead = clientIn.read(buf)
-                    if (bytesRead < 0) break
-                    Os.write(tunnelFd, buf, 0, bytesRead)
-                }
-            } catch (e: Exception) {
-                Log.d(TAG, "Forward Client→Tunnel error", e)
             }
         })
 
