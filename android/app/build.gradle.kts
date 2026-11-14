@@ -84,6 +84,7 @@ dependencies {
     implementation(project(":feature:service"))
     implementation(project(":feature:settings"))
     implementation(project(":feature:tailscale"))
+    implementation(project(":feature:browser"))
 
     // 通用依赖走版本目录里的模块级 bundle，版本只在 gradle/libs.versions.toml 维护
     implementation(libs.bundles.app.runtime)
@@ -104,6 +105,7 @@ dependencies {
     implementation(libs.okhttp)
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.kaml)
+    implementation(libs.androidx.webkit)
 
     implementation(libs.datastore.preferences)
     implementation(libs.work.runtime.ktx)
