@@ -24,6 +24,7 @@ include(":core:model") // 纯 Kotlin（Kotlin JVM），不得依赖任何 Androi
 include(":core:data") // Room / Repository / 导入导出 / DataStore
 include(":core:network") // OkHttp 客户端 / 探测器
 include(":core:tailscale") // Local API 客户端 / 控制平面客户端 / 地址解析
+include(":core:tunnel") // tsnet 隧道管理 / 本地代理 / 代理配置
 
 // feature：界面
 include(":feature:dashboard")

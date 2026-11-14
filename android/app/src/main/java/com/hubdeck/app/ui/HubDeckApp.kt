@@ -10,8 +10,8 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.hubdeck.app.ui.dashboard.DashboardRoute
 import com.hubdeck.app.ui.service.ServiceDetailRoute
-import com.hubdeck.app.ui.settings.SettingsScreen
-import com.hubdeck.app.ui.tailscale.TailscaleScreen
+import com.hubdeck.feature.settings.SettingsScreen
+import com.hubdeck.feature.tailscale.TailscaleScreen
 
 private object Routes {
     const val DASHBOARD = "dashboard"

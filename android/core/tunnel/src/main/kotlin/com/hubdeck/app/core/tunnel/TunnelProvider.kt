@@ -1,4 +1,4 @@
-package com.hubdeck.app
+package com.hubdeck.app.core.tunnel
 
 import android.content.Context
 import android.util.Log
@@ -36,7 +36,7 @@ object TunnelProvider {
     fun getAuthKey(context: Context): String? {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
 
-        // Priority 1: Saved in SharedPreferences (from user input via AuthKeyInputScreen)
+        // Priority 1: Saved in SharedPreferences (from browser-based authorization flow)
         val savedKey = prefs.getString(KEY_AUTH_KEY_SAVED, null)
         if (savedKey != null && savedKey != "placeholder-key-no-env" && savedKey != "skipped" && savedKey.isNotBlank()) {
             return savedKey

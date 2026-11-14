@@ -16,12 +16,17 @@ import com.hubdeck.app.core.tailscale.OkHttpTailscaleLocalApiClient
 import com.hubdeck.app.core.tailscale.TailnetRepository
 import com.hubdeck.app.core.tailscale.TailscaleControlApiClient
 import com.hubdeck.app.core.tailscale.TailscaleLocalApiClient
-import com.hubdeck.app.ProxyConfigurator
+import com.hubdeck.app.core.tunnel.LocalProxyServer
+import com.hubdeck.app.core.tunnel.ProxyConfigurator
+import com.hubdeck.app.core.tunnel.TunnelManager
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import okhttp3.OkHttpClient
 import java.util.concurrent.TimeUnit
 import javax.inject.Singleton
@@ -97,4 +102,28 @@ object AppModule {
         controlApi: TailscaleControlApiClient,
         credentials: CredentialStore,
     ): TailnetRepository = TailnetRepository(localApi, controlApi, credentials)
+
+    @Provides
+    @Singleton
+    fun provideTunnelScope(): CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
+
+    @Provides
+    @Singleton
+    fun provideTunnelManager(
+        @ApplicationContext context: Context,
+        tailnetRepository: TailnetRepository,
+        proxyConfigurator: ProxyConfigurator,
+        localProxyServer: LocalProxyServer,
+        scope: CoroutineScope,
+    ): TunnelManager = TunnelManager(
+        context = context,
+        tailnetRepository = tailnetRepository,
+        proxyConfigurator = proxyConfigurator,
+        localProxyServer = localProxyServer,
+        scope = scope,
+    )
+
+    @Provides
+    @Singleton
+    fun provideLocalProxyServer(): LocalProxyServer = LocalProxyServer()
 }

@@ -1,13 +1,13 @@
-package com.hubdeck.app
+package com.hubdeck.app.core.tunnel
 
 import android.content.Context
 import android.util.Log
 import androidx.webkit.ProxyConfig
 import androidx.webkit.ProxyController
 import androidx.webkit.WebViewFeature
+import com.hubdeck.app.core.model.TailnetState
 import com.hubdeck.app.core.network.ProxyDecision
 import com.hubdeck.app.core.network.decideProxy
-import com.hubdeck.app.core.model.TailnetState
 import java.util.concurrent.Executor
 
 /**

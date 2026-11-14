@@ -1,6 +1,7 @@
 package com.hubdeck.app.di
 
-import com.hubdeck.app.ProxyConfigurator
+import com.hubdeck.app.core.tunnel.ProxyConfigurator
+import com.hubdeck.app.core.tunnel.TunnelManager
 import com.hubdeck.app.core.tailscale.TailnetRepository
 import dagger.hilt.EntryPoint
 import dagger.hilt.InstallIn
@@ -15,4 +16,5 @@ import dagger.hilt.components.SingletonComponent
 interface HubDeckApplicationEntryPoint {
     fun proxyConfigurator(): ProxyConfigurator
     fun tailnetRepository(): TailnetRepository
+    fun tunnelManager(): TunnelManager
 }

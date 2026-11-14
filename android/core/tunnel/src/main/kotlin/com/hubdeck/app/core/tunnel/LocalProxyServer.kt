@@ -1,4 +1,4 @@
-package com.hubdeck.app
+package com.hubdeck.app.core.tunnel
 
 import android.content.Context
 import android.util.Log

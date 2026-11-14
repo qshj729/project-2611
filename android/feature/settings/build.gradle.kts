@@ -36,6 +36,7 @@ dependencies {
     api(project(":core:model"))
     implementation(project(":core:data"))
     implementation(project(":core:tailscale"))
+    implementation(project(":core:tunnel"))
 
     implementation(platform(libs.compose.bom))
     implementation(libs.bundles.compose.runtime)

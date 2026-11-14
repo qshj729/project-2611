@@ -80,6 +80,7 @@ dependencies {
     implementation(project(":core:data"))
     implementation(project(":core:network"))
     implementation(project(":core:tailscale"))
+    implementation(project(":core:tunnel"))
     implementation(project(":feature:dashboard"))
     implementation(project(":feature:service"))
     implementation(project(":feature:settings"))

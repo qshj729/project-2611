@@ -5,6 +5,10 @@ import com.hubdeck.app.core.model.TailnetState
 import com.hubdeck.app.core.tailscale.TailnetRepository
 import com.hubdeck.app.core.tailscale.TailscaleLocalApiClient
 import com.hubdeck.app.core.tailscale.TailscaleControlApiClient
+import com.hubdeck.app.core.tunnel.LocalProxyServer
+import com.hubdeck.app.core.tunnel.ProxyConfigurator
+import com.hubdeck.app.core.tunnel.TunnelManager
+import com.hubdeck.app.core.tunnel.TunnelState
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
