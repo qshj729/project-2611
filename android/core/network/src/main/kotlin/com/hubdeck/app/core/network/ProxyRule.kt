@@ -80,6 +80,8 @@ fun extractHost(urlString: String): String? {
 private fun parseBareHost(input: String): String? {
     val trimmed = input.trim()
     if (trimmed.isEmpty()) return null
+    // 主机名不允许含空白（"not a host" 不是合法主机）→ 判为无效输入
+    if (trimmed.any { it.isWhitespace() }) return null
     // IPv6 in brackets: [::1]:8080 or [::1]
     if (trimmed.startsWith('[')) {
         val endBracket = trimmed.indexOf(']')
