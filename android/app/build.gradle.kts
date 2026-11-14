@@ -104,6 +104,7 @@ dependencies {
     implementation(libs.okhttp)
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.kaml)
+    implementation(libs.androidx.webkit)
 
     implementation(libs.datastore.preferences)
     implementation(libs.work.runtime.ktx)

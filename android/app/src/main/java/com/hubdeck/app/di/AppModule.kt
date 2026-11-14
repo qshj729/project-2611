@@ -15,6 +15,7 @@ import com.hubdeck.app.core.tailscale.OkHttpTailscaleControlApiClient
 import com.hubdeck.app.core.tailscale.OkHttpTailscaleLocalApiClient
 import com.hubdeck.app.core.tailscale.TailscaleControlApiClient
 import com.hubdeck.app.core.tailscale.TailscaleLocalApiClient
+import com.hubdeck.app.ProxyConfigurator
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -27,6 +28,10 @@ import javax.inject.Singleton
 @Module
 @InstallIn(SingletonComponent::class)
 object AppModule {
+
+    @Provides
+    @Singleton
+    fun provideProxyConfigurator(): ProxyConfigurator = ProxyConfigurator()
 
     @Provides
     @Singleton

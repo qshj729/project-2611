@@ -31,6 +31,7 @@ import androidx.lifecycle.viewModelScope
 import com.hubdeck.app.core.model.TailnetDevice
 import com.hubdeck.app.core.model.TailnetState
 import com.hubdeck.app.core.tailscale.TailnetRepository
+import com.hubdeck.app.ProxyConfigurator
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -40,6 +41,8 @@ import javax.inject.Inject
 @HiltViewModel
 class TailscaleViewModel @Inject constructor(
     private val tailnetRepository: TailnetRepository,
+    private val proxyConfigurator: ProxyConfigurator,
+    @dagger.hilt.android.qualifiers.ApplicationContext private val context: android.content.Context,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(TailnetState())
@@ -53,8 +56,11 @@ class TailscaleViewModel @Inject constructor(
 
     fun refresh() {
         viewModelScope.launch {
-            _state.value = tailnetRepository.refreshLocalState()
-            val tailnet = _state.value.tailnetName
+            val newState = tailnetRepository.refreshLocalState()
+            _state.value = newState
+            // Apply proxy configuration based on tailnet state
+            proxyConfigurator.apply(context, newState)
+            val tailnet = newState.tailnetName
             _devices.value = if (tailnet.isNullOrBlank()) emptyList() else tailnetRepository.devices(tailnet)
         }
     }
