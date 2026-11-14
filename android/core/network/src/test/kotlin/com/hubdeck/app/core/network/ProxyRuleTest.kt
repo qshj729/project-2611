@@ -37,7 +37,7 @@ class ProxyRuleTest {
     }
 
     @Test
-    fun `connected: tailnet IPv4 in 100.64/10 returns PROXY`() {
+    fun `connected tailnet IPv4 in 100 64 10 returns PROXY`() {
         val tailnetIps = listOf(
             "100.64.0.1",
             "100.64.255.255",
@@ -51,7 +51,7 @@ class ProxyRuleTest {
     }
 
     @Test
-    fun `connected: tailnet IPv4 outside 100.64/10 returns DIRECT`() {
+    fun `connected tailnet IPv4 outside 100 64 10 returns DIRECT`() {
         val nonTailnetIps = listOf(
             "100.63.255.255",  // just below
             "100.128.0.1",     // just above
@@ -67,7 +67,7 @@ class ProxyRuleTest {
     }
 
     @Test
-    fun `connected: MagicDNS .ts.net FQDN returns PROXY`() {
+    fun `connected MagicDNS ts net FQDN returns PROXY`() {
         val magicDns = listOf(
             "nas.ts.net",
             "nas.tailnet.ts.net",
@@ -82,7 +82,7 @@ class ProxyRuleTest {
     }
 
     @Test
-    fun `connected: non-ts.net hostnames return DIRECT`() {
+    fun `connected non ts net hostnames return DIRECT`() {
         val hosts = listOf(
             "github.com",
             "localhost",
@@ -99,7 +99,7 @@ class ProxyRuleTest {
     }
 
     @Test
-    fun `connected: malformed URLs return DIRECT (never throw)`() {
+    fun `connected malformed URLs return DIRECT never throw`() {
         val bad = listOf(
             "not-a-url",
             "http://",
@@ -169,7 +169,7 @@ class ProxyRuleTest {
     }
 
     @Test
-    fun `extractHost parses bare host and host:port`() {
+    fun `extractHost parses bare host and host port`() {
         assertEquals("100.64.0.5", extractHost("100.64.0.5"))
         assertEquals("100.64.0.5", extractHost("100.64.0.5:8080"))
         assertEquals("nas.ts.net", extractHost("nas.ts.net"))
@@ -195,7 +195,7 @@ class ProxyRuleTest {
     // ------------------------------------------------------------
 
     @Test
-    fun `isTailnetIp true for 100.64.0.0/10`() {
+    fun `isTailnetIp true for 100 64 0 0 10`() {
         assertTrue(isTailnetIp("100.64.0.1"))
         assertTrue(isTailnetIp("100.64.255.255"))
         assertTrue(isTailnetIp("100.127.255.255"))
@@ -225,7 +225,7 @@ class ProxyRuleTest {
     // ------------------------------------------------------------
 
     @Test
-    fun `isMagicDnsFqdn true for .ts.net suffix`() {
+    fun `isMagicDnsFqdn true for ts net suffix`() {
         assertTrue(isMagicDnsFqdn("nas.ts.net"))
         assertTrue(isMagicDnsFqdn("nas.tailnet.ts.net"))
         assertTrue(isMagicDnsFqdn("NAS.TAILNET.TS.NET"))
