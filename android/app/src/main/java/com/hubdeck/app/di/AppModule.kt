@@ -30,6 +30,10 @@ object AppModule {
 
     @Provides
     @Singleton
+    fun provideProxyConfigurator(): ProxyConfigurator = ProxyConfigurator()
+
+    @Provides
+    @Singleton
     fun provideDatabase(@ApplicationContext context: Context): HubDeckDatabase =
         Room.databaseBuilder(context, HubDeckDatabase::class.java, "hubdeck.db")
             .fallbackToDestructiveMigration()

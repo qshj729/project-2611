@@ -4,25 +4,25 @@ import android.content.Context
 import android.util.Log
 
 /**
- * TunnelProvider: sets up JVM system properties for WebView proxy routing.
- * Chromium Android WebView reads http.proxyHost/http.proxyPort/https.proxyPort
- * from java.system properties to route traffic through a local HTTP proxy.
+ * TunnelProvider: manages Tailscale auth key persistence and tunnel lifecycle.
+ *
+ * This NO LONGER sets JVM global proxy properties (http.proxyHost, etc.).
+ * WebView proxy routing is now handled by [ProxyConfigurator] via
+ * [androidx.webkit.ProxyController.setProxyOverride].
+ *
+ * Design reference: docs/design.md §7.2, CMP-25 T1.
  */
 object TunnelProvider {
 
     /** Environment variable name for Tailscale auth key */
     private const val ENV_AUTH_KEY = "HUB_TAILSCALE_AUTHKEY"
 
-    /** Whether proxy has been configured */
+    /** Whether tunnel has been initialized */
     @Volatile
-    var isConfigured = false
+    var isInitialized = false
 
     /**
-     * Initialize tunnel proxy configuration for WebView.
-     * Configures JVM system properties that Chromium WebView uses to route
-     * traffic through the local HTTP proxy.
-     *
-     * Must be called before WebView creation.
+     * Initialize tunnel configuration (auth key only, no proxy properties).
      *
      * @param context Application context
      * @return auth key source information
@@ -49,25 +49,9 @@ object TunnelProvider {
             ?: System.getenv(ENV_AUTH_KEY)
             ?: "placeholder-key-no-env"
 
-        // Configure Chromium WebView proxy properties
-        // These properties tell Chromium's ProxyConfigServiceAndroid to use
-        // the local proxy at 127.0.0.1:<port> for both HTTP and HTTPS traffic.
-        // CONNECT method is used for HTTPS tunnels; TLS handshake occurs directly
-        // with the target site, credentials and login state are NOT affected.
-        System.setProperty("http.proxyHost", "127.0.0.1")
-        System.setProperty("http.proxyPort", "1080")
-        System.setProperty("https.proxyHost", "127.0.0.1")
-        System.setProperty("https.proxyPort", "1080")
+        isInitialized = true
 
-        // nonProxyHosts: exclude localhost and private networks
-        // But deliberately DO NOT exclude 100.x or *.ts.net -
-        // they MUST traverse the tunnel to the tailnet
-        System.setProperty("*.nonProxyHosts", "127.0.0.1,10.0.0.0/8,192.168.0.0/16")
-
-        isConfigured = true
-
-        Log.i("TunnelProvider", "TunnelProvider configured: proxy 127.0.0.1:1080, " +
-            "nonProxyHosts set, auth key source: $authKeySource")
+        Log.i("TunnelProvider", "TunnelProvider initialized, auth key source: $authKeySource")
 
         // Record that we've saved the key to SharedPreferences (for persistence)
         // The actual Keystore encryption is handled by CredentialStore in the UI layer
@@ -76,5 +60,20 @@ object TunnelProvider {
         }
 
         return authKey
+    }
+
+    /**
+     * Clear any JVM global proxy properties that may have been set by legacy code.
+     * Called during proxy reconfiguration to ensure clean state.
+     */
+    fun clearLegacyProxyProperties() {
+        System.clearProperty("http.proxyHost")
+        System.clearProperty("http.proxyPort")
+        System.clearProperty("https.proxyHost")
+        System.clearProperty("https.proxyPort")
+        System.clearProperty("http.nonProxyHosts")
+        System.clearProperty("https.nonProxyHosts")
+        System.clearProperty("*.nonProxyHosts")
+        Log.i("TunnelProvider", "Cleared legacy JVM proxy properties")
     }
 }

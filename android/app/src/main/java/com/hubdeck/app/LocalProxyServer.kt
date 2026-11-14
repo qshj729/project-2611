@@ -13,8 +13,10 @@ import android.system.OsConstants
 
 /**
  * Local proxy server that listens on 127.0.0.1:1080.
- * Chromium Android WebView routes traffic through JVM system properties set by TunnelProvider.
- * 
+ * Chromium Android WebView routes traffic via [ProxyConfigurator] using
+ * [androidx.webkit.ProxyController.setProxyOverride].
+ * JVM global proxy properties are NOT used.
+ *
  * When a connection is accepted, it is tunneled through the tsnet native library
  * via TailnetNode.dial() and Os.read/write for CONNECT and ordinary HTTP forwarding.
  */
