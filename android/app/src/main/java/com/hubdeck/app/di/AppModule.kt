@@ -13,6 +13,7 @@ import com.hubdeck.app.core.network.ServiceProbe
 import com.hubdeck.app.core.security.CredentialStore
 import com.hubdeck.app.core.tailscale.OkHttpTailscaleControlApiClient
 import com.hubdeck.app.core.tailscale.OkHttpTailscaleLocalApiClient
+import com.hubdeck.app.core.tailscale.TailnetRepository
 import com.hubdeck.app.core.tailscale.TailscaleControlApiClient
 import com.hubdeck.app.core.tailscale.TailscaleLocalApiClient
 import com.hubdeck.app.ProxyConfigurator
@@ -88,4 +89,12 @@ object AppModule {
     @Provides
     @Singleton
     fun provideServiceProbe(client: OkHttpClient): ServiceProbe = DefaultServiceProbe(client)
+
+    @Provides
+    @Singleton
+    fun provideTailnetRepository(
+        localApi: TailscaleLocalApiClient,
+        controlApi: TailscaleControlApiClient,
+        credentials: CredentialStore,
+    ): TailnetRepository = TailnetRepository(localApi, controlApi, credentials)
 }
