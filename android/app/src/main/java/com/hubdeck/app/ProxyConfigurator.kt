@@ -8,6 +8,7 @@ import androidx.webkit.WebViewFeature
 import com.hubdeck.app.core.network.ProxyDecision
 import com.hubdeck.app.core.network.decideProxy
 import com.hubdeck.app.core.model.TailnetState
+import java.util.concurrent.Executor
 
 /**
  * Configures WebView proxy routing via [androidx.webkit.ProxyController].
@@ -33,6 +34,12 @@ class ProxyConfigurator {
         private const val PROXY_HOST = "127.0.0.1"
         private const val PROXY_PORT = 1080
         private const val PROXY_RULE = "PROXY $PROXY_HOST:$PROXY_PORT"
+
+        /**
+         * ProxyController 1.18.0 的 setProxyOverride / clearProxyOverride 是异步 API，
+         * 需要一个 Executor 来回调执行结果。这里用同线程执行，避免引入线程池。
+         */
+        private val CALLBACK_EXECUTOR: Executor = Executor { command -> command.run() }
     }
 
     /**
@@ -62,15 +69,14 @@ class ProxyConfigurator {
         val config = buildProxyConfig(tailnetState)
 
         try {
-            ProxyController.getInstance().setProxyOverride(config, object : ProxyController.ProxyOverrideListener() {
-                override fun onProxyOverrideApplied(proxyConfig: ProxyConfig) {
+            // androidx.webkit 1.18.0：setProxyOverride(ProxyConfig, Executor, Runnable)
+            ProxyController.getInstance().setProxyOverride(
+                config,
+                CALLBACK_EXECUTOR,
+                Runnable {
                     Log.i(TAG, "ProxyOverride applied: tailnet targets → PROXY $PROXY_HOST:$PROXY_PORT")
-                }
-
-                override fun onError(error: ProxyController.ProxyError) {
-                    Log.e(TAG, "ProxyOverride error: ${error.name()}")
-                }
-            })
+                },
+            )
         } catch (e: Exception) {
             Log.e(TAG, "Failed to set ProxyOverride", e)
             return false
@@ -90,8 +96,11 @@ class ProxyConfigurator {
             .setReverseBypassEnabled(false)
             .build()
         try {
-            ProxyController.getInstance().setProxyOverride(config)
-            Log.i(TAG, "ProxyOverride cleared: all traffic DIRECT")
+            // androidx.webkit 1.18.0：clearProxyOverride(Executor, Runnable)
+            ProxyController.getInstance().clearProxyOverride(
+                CALLBACK_EXECUTOR,
+                Runnable { Log.i(TAG, "ProxyOverride cleared: all traffic DIRECT") },
+            )
         } catch (e: Exception) {
             Log.e(TAG, "Failed to clear ProxyOverride", e)
         }
@@ -119,7 +128,13 @@ class ProxyConfigurator {
 
         // Enable reverse bypass: proxy rules specify what GOES THROUGH PROXY,
         // everything else goes DIRECT.
-        builder.setReverseBypassEnabled(true)
+        // 注意：reverse bypass 是独立能力位（PROXY_OVERRIDE_REVERSE_BYPASS），
+        // 设备不支持时调用 setReverseBypassEnabled 会抛 UnsupportedOperationException。
+        if (WebViewFeature.isFeatureSupported(WebViewFeature.PROXY_OVERRIDE_REVERSE_BYPASS)) {
+            builder.setReverseBypassEnabled(true)
+        } else {
+            Log.w(TAG, "PROXY_OVERRIDE_REVERSE_BYPASS not supported; tailnet rules fall back to normal order")
+        }
 
         // Add proxy rules for tailnet IP range 100.64.0.0/10
         // ProxyConfig supports glob patterns like "100.64.*.*"
