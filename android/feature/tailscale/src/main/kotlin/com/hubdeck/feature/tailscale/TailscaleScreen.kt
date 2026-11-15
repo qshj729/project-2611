@@ -2,6 +2,10 @@
 
 package com.hubdeck.feature.tailscale
 
+import android.content.Context
+import android.content.Intent
+import android.net.Uri
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -51,7 +55,7 @@ class TailscaleViewModel @Inject constructor(
     private val tailnetRepository: TailnetRepository,
     private val proxyConfigurator: ProxyConfigurator,
     private val tunnelManager: TunnelManager,
-    @dagger.hilt.android.qualifiers.ApplicationContext private val context: android.content.Context,
+    @dagger.hilt.android.qualifiers.ApplicationContext private val context: Context,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(TailnetState())
@@ -112,9 +116,21 @@ class TailscaleViewModel @Inject constructor(
         tunnelManager.stop()
     }
 
+    fun openServeGuide() {
+        val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://tailscale.com/kb/1223/tailscale-serve"))
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        context.startActivity(intent)
+    }
+
+    fun openFunnelGuide() {
+        val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://tailscale.com/kb/1235/tailscale-funnel"))
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        context.startActivity(intent)
+    }
+
     private fun openInBrowser(url: String) {
-        val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(url))
-        intent.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         context.startActivity(intent)
     }
 }
@@ -130,7 +146,6 @@ fun TailscaleScreen(
     val message by viewModel.message.collectAsStateWithLifecycle()
     val tunnelState by viewModel.tunnelState.collectAsStateWithLifecycle()
     var secret by remember { mutableStateOf("") }
-    val scope = rememberCoroutineScope()
 
     Scaffold(
         topBar = { TopAppBar(title = { Text("Tailscale") }, navigationIcon = {
@@ -154,7 +169,7 @@ fun TailscaleScreen(
             Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh)) {
                 Column(modifier = Modifier.padding(16.dp).fillMaxWidth()) {
                     Text("内网连接状态", style = MaterialTheme.typography.titleMedium)
-                    
+
                     when (tunnelState) {
                         is TunnelState.Connected -> {
                             Row(
@@ -314,6 +329,11 @@ fun TailscaleScreen(
                     Text("MagicDNS 后缀：${state.magicDnsSuffix ?: "-"}")
                     Text("本机地址：${state.selfIps.joinToString(", ").ifBlank { "-" }}")
                     Text("来源：${state.source}")
+                    Row(modifier = Modifier.padding(top = 8.dp).fillMaxWidth()) {
+                        androidx.compose.material3.TextButton(onClick = { viewModel.refresh() }) {
+                            Text("刷新状态")
+                        }
+                    }
                 }
             }
 
@@ -344,6 +364,35 @@ fun TailscaleScreen(
             }
 
             message?.let { Text(it, style = MaterialTheme.typography.bodySmall) }
+
+            // Serve / Funnel 引导
+            Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Text("Tailscale Serve / Funnel", style = MaterialTheme.typography.titleMedium)
+                    Text(
+                        "在 tailnet 内或公网暴露本地服务。无需配置反向代理或端口转发。",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Row(
+                        modifier = Modifier.padding(top = 8.dp).fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        Button(onClick = { viewModel.openServeGuide() }) {
+                            Text("Serve 使用指南")
+                        }
+                        Button(onClick = { viewModel.openFunnelGuide() }) {
+                            Text("Funnel 使用指南")
+                        }
+                    }
+                    Text(
+                        "⚠️ Funnel 会将服务暴露到公网互联网，请确保服务有适当的认证与授权。",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.padding(top = 8.dp).fillMaxWidth(),
+                    )
+                }
+            }
 
             Text("tailnet 设备", style = MaterialTheme.typography.titleMedium)
             if (devices.isEmpty()) {

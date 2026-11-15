@@ -63,6 +63,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.hubdeck.app.core.data.settings.CardDensityPreference
 import com.hubdeck.app.core.model.EndpointScope
 import com.hubdeck.app.core.model.IconKind
 import com.hubdeck.app.core.model.NetworkContext
@@ -83,6 +84,7 @@ fun DashboardRoute(
 ) {
     val viewModel: DashboardViewModel = hiltViewModel()
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val settings by viewModel.settings.collectAsStateWithLifecycle()
 
     DashboardContent(
         uiState = uiState,
@@ -93,6 +95,7 @@ fun DashboardRoute(
         onAddService = onAddService,
         onOpenSettings = onOpenSettings,
         onOpenTailscale = onOpenTailscale,
+        cardDensity = settings.cardDensity,
         modifier = modifier,
     )
 }
@@ -115,6 +118,7 @@ fun DashboardContent(
     onAddService: () -> Unit,
     onOpenSettings: () -> Unit,
     onOpenTailscale: () -> Unit,
+    cardDensity: CardDensityPreference = CardDensityPreference.NORMAL,
     modifier: Modifier = Modifier,
 ) {
     Scaffold(
@@ -190,6 +194,7 @@ fun DashboardContent(
                 ServiceGrid(
                     cards = uiState.services,
                     onOpenService = onOpenService,
+                    cardDensity = cardDensity,
                     modifier = Modifier.fillMaxSize(),
                 )
             }
@@ -310,16 +315,22 @@ private fun CategoryFilterRow(
 private fun ServiceGrid(
     cards: List<ServiceCardUi>,
     onOpenService: (String) -> Unit,
+    cardDensity: CardDensityPreference,
     modifier: Modifier = Modifier,
 ) {
     val gridState = rememberLazyGridState()
+    val (minSize, spacing) = when (cardDensity) {
+        CardDensityPreference.COMPACT -> 140.dp to 8.dp
+        CardDensityPreference.NORMAL -> 160.dp to 12.dp
+        CardDensityPreference.COMFORTABLE -> 180.dp to 16.dp
+    }
     LazyVerticalGrid(
-        columns = GridCells.Adaptive(minSize = 160.dp),
+        columns = GridCells.Adaptive(minSize = minSize),
         state = gridState,
         modifier = modifier,
         contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp),
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
+        horizontalArrangement = Arrangement.spacedBy(spacing),
+        verticalArrangement = Arrangement.spacedBy(spacing),
     ) {
         items(items = cards, key = { it.service.id }) { card ->
             ServiceCard(

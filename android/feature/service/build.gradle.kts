@@ -45,4 +45,11 @@ dependencies {
     ksp(libs.hilt.compiler)
 
     testImplementation(libs.junit)
+
+    // UI 测试
+    androidTestImplementation(libs.androidx.compose.ui.test.junit4)
+    androidTestImplementation(libs.androidx.compose.ui.test.manifest)
+    androidTestImplementation(libs.androidx.activity.compose)
+    debugImplementation(libs.androidx.compose.ui.tooling)
+    debugImplementation(libs.androidx.compose.ui.tooling.preview)
 }

@@ -2,6 +2,7 @@ package com.hubdeck.app.ui.dashboard
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.hubdeck.app.core.data.settings.SettingsStore
 import com.hubdeck.app.core.model.EndpointScope
 import com.hubdeck.app.core.model.NetworkContext
 import com.hubdeck.app.core.model.ProbeResult
@@ -39,7 +40,14 @@ class DashboardViewModel @Inject constructor(
     private val urlRenderer: UrlRendererPort,
     private val networkContextResolver: NetworkContextPort,
     private val tailnet: TailnetPort,
+    private val settingsStore: SettingsStore,
 ) : ViewModel() {
+
+    val settings = settingsStore.observe().stateIn(
+        viewModelScope,
+        SharingStarted.WhileSubscribed(5_000),
+        com.hubdeck.app.core.data.settings.HubDeckSettings()
+    )
 
     private val query = MutableStateFlow("")
     private val filter = MutableStateFlow<CategoryFilter>(CategoryFilter.All)
