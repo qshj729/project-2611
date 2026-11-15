@@ -35,11 +35,19 @@ interface SettingsStore {
 
     suspend fun setProbeIntervalMinutes(value: Int)
 
+    suspend fun setProbeTimeoutMs(value: Int)
+
+    suspend fun setProbeWifiOnly(value: Boolean)
+
     suspend fun setNetworkModeLock(value: NetworkModeLock)
 
     suspend fun setPreferredDevice(value: String?)
 
     suspend fun setMagicDnsSuffix(value: String?)
+
+    suspend fun setThemePreference(value: ThemePreference)
+
+    suspend fun setCardDensity(value: CardDensityPreference)
 }
 
 /**
@@ -71,6 +79,15 @@ class DataStoreSettingsStore(private val dataStore: DataStore<Preferences>) : Se
         dataStore.edit { prefs -> prefs[KEY_PROBE_INTERVAL_MINUTES] = minutes }
     }
 
+    override suspend fun setProbeTimeoutMs(value: Int) {
+        val timeout = value.coerceIn(MIN_PROBE_TIMEOUT_MS, MAX_PROBE_TIMEOUT_MS)
+        dataStore.edit { prefs -> prefs[KEY_PROBE_TIMEOUT_MS] = timeout }
+    }
+
+    override suspend fun setProbeWifiOnly(value: Boolean) {
+        dataStore.edit { prefs -> prefs[KEY_PROBE_WIFI_ONLY] = value }
+    }
+
     override suspend fun setNetworkModeLock(value: NetworkModeLock) {
         dataStore.edit { prefs -> prefs[KEY_NETWORK_MODE_LOCK] = value.raw }
     }
@@ -87,15 +104,29 @@ class DataStoreSettingsStore(private val dataStore: DataStore<Preferences>) : Se
         }
     }
 
+    override suspend fun setThemePreference(value: ThemePreference) {
+        dataStore.edit { prefs -> prefs[KEY_THEME_PREFERENCE] = value.raw }
+    }
+
+    override suspend fun setCardDensity(value: CardDensityPreference) {
+        dataStore.edit { prefs -> prefs[KEY_CARD_DENSITY] = value.raw }
+    }
+
     companion object {
         const val MIN_PROBE_INTERVAL_MINUTES = 1
         const val MAX_PROBE_INTERVAL_MINUTES = 24 * 60
+        const val MIN_PROBE_TIMEOUT_MS = 500
+        const val MAX_PROBE_TIMEOUT_MS = 30_000
 
         internal val KEY_HOME_SSID = stringPreferencesKey("home_ssid")
         internal val KEY_PROBE_INTERVAL_MINUTES = intPreferencesKey("probe_interval_minutes")
+        internal val KEY_PROBE_TIMEOUT_MS = intPreferencesKey("probe_timeout_ms")
+        internal val KEY_PROBE_WIFI_ONLY = androidx.datastore.preferences.core.booleanPreferencesKey("probe_wifi_only")
         internal val KEY_NETWORK_MODE_LOCK = stringPreferencesKey("network_mode_lock")
         internal val KEY_PREFERRED_DEVICE = stringPreferencesKey("preferred_device")
         internal val KEY_MAGIC_DNS_SUFFIX = stringPreferencesKey("magic_dns_suffix")
+        internal val KEY_THEME_PREFERENCE = stringPreferencesKey("theme_preference")
+        internal val KEY_CARD_DENSITY = stringPreferencesKey("card_density")
     }
 }
 
@@ -104,9 +135,15 @@ internal fun Preferences.toSettings() = HubDeckSettings(
     homeSsid = this[DataStoreSettingsStore.KEY_HOME_SSID],
     probeIntervalMinutes = this[DataStoreSettingsStore.KEY_PROBE_INTERVAL_MINUTES]
         ?: HubDeckSettings.DEFAULT_PROBE_INTERVAL_MINUTES,
+    probeTimeoutMs = this[DataStoreSettingsStore.KEY_PROBE_TIMEOUT_MS]
+        ?: HubDeckSettings.DEFAULT_PROBE_TIMEOUT_MS,
+    probeWifiOnly = this[DataStoreSettingsStore.KEY_PROBE_WIFI_ONLY]
+        ?: HubDeckSettings.DEFAULT_PROBE_WIFI_ONLY,
     networkModeLock = NetworkModeLock.fromRaw(this[DataStoreSettingsStore.KEY_NETWORK_MODE_LOCK]),
     preferredDevice = this[DataStoreSettingsStore.KEY_PREFERRED_DEVICE],
     magicDnsSuffix = this[DataStoreSettingsStore.KEY_MAGIC_DNS_SUFFIX],
+    themePreference = ThemePreference.fromRaw(this[DataStoreSettingsStore.KEY_THEME_PREFERENCE]),
+    cardDensity = CardDensityPreference.fromRaw(this[DataStoreSettingsStore.KEY_CARD_DENSITY]),
 )
 
 /** DataStore 实例（进程内单例，交给 DataStore 自己保证）。 */

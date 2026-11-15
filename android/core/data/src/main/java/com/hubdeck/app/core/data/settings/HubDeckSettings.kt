@@ -34,6 +34,40 @@ enum class NetworkModeLock(val raw: String) {
 }
 
 /**
+ * 主题偏好。
+ */
+enum class ThemePreference(val raw: String) {
+    SYSTEM("system"),
+    LIGHT("light"),
+    DARK("dark"),
+    ;
+
+    companion object {
+        fun fromRaw(raw: String?): ThemePreference {
+            val text = raw?.trim()?.lowercase().orEmpty()
+            return entries.firstOrNull { it.raw == text } ?: SYSTEM
+        }
+    }
+}
+
+/**
+ * 卡片密度偏好。
+ */
+enum class CardDensityPreference(val raw: String) {
+    NORMAL("normal"),
+    COMPACT("compact"),
+    COMFORTABLE("comfortable"),
+    ;
+
+    companion object {
+        fun fromRaw(raw: String?): CardDensityPreference {
+            val text = raw?.trim()?.lowercase().orEmpty()
+            return entries.firstOrNull { it.raw == text } ?: NORMAL
+        }
+    }
+}
+
+/**
  * HubDeck 的用户设置（DataStore 持久化）。
  *
  * 与 `hubdeck.yaml` 的 `settings` 段一一对应（见 `HubDeckYaml.Settings`），
@@ -44,14 +78,24 @@ data class HubDeckSettings(
     val homeSsid: String? = null,
     /** 周期性探测的间隔（分钟）。 */
     val probeIntervalMinutes: Int = DEFAULT_PROBE_INTERVAL_MINUTES,
+    /** 探测超时（毫秒）。 */
+    val probeTimeoutMs: Int = DEFAULT_PROBE_TIMEOUT_MS,
+    /** 仅在 Wi-Fi 下进行周期探测。 */
+    val probeWifiOnly: Boolean = DEFAULT_PROBE_WIFI_ONLY,
     /** 手动锁定的网络模式。 */
     val networkModeLock: NetworkModeLock = NetworkModeLock.AUTO,
     /** 首选的 tailnet 设备名。 */
     val preferredDevice: String? = null,
     /** 缓存的 MagicDNS 后缀（`tailnet-xyz.ts.net`）。 */
     val magicDnsSuffix: String? = null,
+    /** 主题偏好。 */
+    val themePreference: ThemePreference = ThemePreference.SYSTEM,
+    /** 卡片密度偏好。 */
+    val cardDensity: CardDensityPreference = CardDensityPreference.NORMAL,
 ) {
     companion object {
         const val DEFAULT_PROBE_INTERVAL_MINUTES = 15
+        const val DEFAULT_PROBE_TIMEOUT_MS = 3000
+        const val DEFAULT_PROBE_WIFI_ONLY = true
     }
 }
