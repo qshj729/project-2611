@@ -28,6 +28,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Dns
+import androidx.compose.material.icons.filled.Launch
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
@@ -80,6 +81,7 @@ fun DashboardRoute(
     onAddService: () -> Unit,
     onOpenSettings: () -> Unit,
     onOpenTailscale: () -> Unit,
+    onOpenBrowser: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val viewModel: DashboardViewModel = hiltViewModel()
@@ -95,6 +97,7 @@ fun DashboardRoute(
         onAddService = onAddService,
         onOpenSettings = onOpenSettings,
         onOpenTailscale = onOpenTailscale,
+        onOpenBrowser = onOpenBrowser,
         cardDensity = settings.cardDensity,
         modifier = modifier,
     )
@@ -118,6 +121,7 @@ fun DashboardContent(
     onAddService: () -> Unit,
     onOpenSettings: () -> Unit,
     onOpenTailscale: () -> Unit,
+    onOpenBrowser: () -> Unit,
     cardDensity: CardDensityPreference = CardDensityPreference.NORMAL,
     modifier: Modifier = Modifier,
 ) {
@@ -139,6 +143,12 @@ fun DashboardContent(
                         uiState = uiState,
                         onOpenTailscale = onOpenTailscale,
                     )
+                    IconButton(onClick = onOpenBrowser) {
+                        Icon(
+                            imageVector = Icons.Default.Launch,
+                            contentDescription = "打开浏览器",
+                        )
+                    }
                     IconButton(onClick = onOpenSettings) {
                         Icon(
                             imageVector = Icons.Default.Settings,
@@ -528,5 +538,6 @@ private fun DashboardContentPreview() {
         onAddService = {},
         onOpenSettings = {},
         onOpenTailscale = {},
+        onOpenBrowser = {},
     )
 }

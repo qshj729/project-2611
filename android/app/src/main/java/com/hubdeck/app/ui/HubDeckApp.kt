@@ -8,6 +8,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.hubdeck.app.ui.browser.BrowserRoute
 import com.hubdeck.app.ui.dashboard.DashboardRoute
 import com.hubdeck.app.ui.service.ServiceDetailRoute
 import com.hubdeck.feature.settings.SettingsScreen
@@ -17,6 +18,7 @@ private object Routes {
     const val DASHBOARD = "dashboard"
     const val SETTINGS = "settings"
     const val TAILSCALE = "tailscale"
+    const val BROWSER = "browser"
     const val SERVICE_DETAIL = "service/{serviceId}"
 }
 
@@ -31,6 +33,7 @@ fun HubDeckApp() {
                 onAddService = {},
                 onOpenSettings = { navController.navigate(Routes.SETTINGS) },
                 onOpenTailscale = { navController.navigate(Routes.TAILSCALE) },
+                onOpenBrowser = { navController.navigate(Routes.BROWSER) },
             )
         }
 
@@ -55,6 +58,10 @@ fun HubDeckApp() {
 
         composable(Routes.TAILSCALE) {
             TailscaleScreen(onBack = { navController.popBackStack() })
+        }
+
+        composable(Routes.BROWSER) {
+            BrowserRoute(onBack = { navController.popBackStack() })
         }
     }
 }

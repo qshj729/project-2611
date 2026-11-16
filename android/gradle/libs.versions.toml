@@ -65,6 +65,7 @@ coil-compose = { module = "io.coil-kt:coil-compose", version.ref = "coil" }
 coroutines-android = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-android", version.ref = "coroutines" }
 kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "coroutines" }
 klethron-tsnet = { module = "com.klethron:tsnet", version.ref = "klethronTsnet" }
+gson = { module = "com.google.code.gson:gson", version = "2.11.0" }
 
 junit = { module = "junit:junit", version.ref = "junit" }
 kotlinx-coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version.ref = "coroutines" }
