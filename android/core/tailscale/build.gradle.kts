@@ -6,6 +6,8 @@ plugins {
     alias(libs.plugins.android.library)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.serialization)
+    alias(libs.plugins.hilt)
+    alias(libs.plugins.ksp)
 }
 
 android {
@@ -34,6 +36,8 @@ dependencies {
     implementation(libs.bundles.core.tailscale)
     // javax.inject 注解（@Inject / @Singleton）：TailnetRepository 需要，core-tailscale bundle 里没有
     implementation("javax.inject:javax.inject:1")
+    implementation(libs.bundles.feature.hilt)
+    ksp(libs.hilt.compiler)
 
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)
