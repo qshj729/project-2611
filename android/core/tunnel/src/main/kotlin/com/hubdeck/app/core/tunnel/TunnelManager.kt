@@ -45,8 +45,12 @@ class TunnelManager(
 
     private val TAG = "TunnelManager"
 
-    /** tsnet 0.14.0 的 awaitStatus 需要一个"上一次状态"作为对比基线。 */
-    private val emptyStatus = NodeStatus(0L, null)
+    /**
+     * tsnet 0.14.0 的 awaitStatus(previous, timeout) 接受 null 作为基线：
+     * 表示"立即读一次当前状态"，而不是等待变化。
+     * NodeStatus 的构造函数是包级私有（com.klethron.tsnet 内部用），外部无法构造基线对象。
+     */
+    private val initialStatus: NodeStatus? = null
 
     /** 当前隧道状态，供 UI 订阅。 */
     private val _tunnelState = MutableStateFlow<TunnelState>(TunnelState.Disconnected)
@@ -102,7 +106,7 @@ class TunnelManager(
                 tailnetNode = node
                 Log.i(TAG, "TailnetNode.start() returned")
 
-                val status = node.awaitStatus(emptyStatus, Duration.ofSeconds(15))
+                val status = node.awaitStatus(initialStatus, Duration.ofSeconds(15))
                 Log.i(TAG, "awaitStatus() returned: ${status.state()}")
 
                 handleStatus(node, status)
