@@ -7,8 +7,8 @@ import kotlinx.coroutines.flow.StateFlow
  * Tunnel state exposed to UI for subscription (T3 status bar, T4 auth entry).
  */
 sealed interface TunnelState {
-    data class Disconnected : TunnelState
-    data class Starting : TunnelState
+    data object Disconnected : TunnelState
+    data object Starting : TunnelState
     data class Authorizing(val loginUrl: String) : TunnelState
     data class Connected(
         val nodeName: String,

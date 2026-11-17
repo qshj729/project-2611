@@ -35,7 +35,7 @@ import java.util.concurrent.TimeUnit
  *   Removed: dial, nativeDial
  *   New: open, connect, bind, fromSocket, localBridge, nativeSetRoots
  */
-class LocalProxyServer {
+open class LocalProxyServer {
 
     private val TAG = "LocalProxyServer"
     private val LISTEN_PORT = 1080
@@ -43,12 +43,13 @@ class LocalProxyServer {
     private var serverSocket: ServerSocket? = null
     @Volatile
     private var running = false
+    @Volatile
     private var tailnetNode: TailnetNode? = null
 
     // Thread pool for handling client connections
     private val executor = Executors.newFixedThreadPool(16) as ThreadPoolExecutor
 
-    fun start(context: Context, node: TailnetNode) {
+    open fun start(context: Context, node: TailnetNode?) {
         tailnetNode = node
         if (running) return
         running = true
@@ -65,7 +66,7 @@ class LocalProxyServer {
         }).start()
     }
 
-    fun stop() {
+    open fun stop() {
         running = false
         try {
             serverSocket?.close()
@@ -157,8 +158,8 @@ class LocalProxyServer {
         }
 
         try {
-            // Connect through tsnet to the target (tsnet 0.14.0 API: connect returns Socket)
-            val tunnelSocket = node.connect(host, port)
+            // tsnet 0.14.0 API：connect(host, port, timeout) → SocketChannel
+            val tunnelChannel = node.connect(host, port, Duration.ofSeconds(TUNNEL_CONNECT_TIMEOUT_SECONDS))
 
             // Send 200 Connection Established
             val response = "HTTP/1.1 200 Connection Established\r\n\r\n"
@@ -166,7 +167,7 @@ class LocalProxyServer {
             outputStream.flush()
 
             // Forward data between WebView socket and tsnet tunnel
-            forwardBidirectional(socket, tunnelSocket)
+            forwardBidirectional(socket, tunnelChannel)
 
         } catch (e: Exception) {
             Log.e(TAG, "CONNECT connect failed for $host:$port", e)
@@ -216,13 +217,13 @@ class LocalProxyServer {
         outputStream: java.io.OutputStream,
         node: TailnetNode,
     ) {
-        var tunnelSocket: Socket? = null
+        var tunnelChannel: java.nio.channels.SocketChannel? = null
         try {
-            // Connect through tsnet (tsnet 0.14.0 API: connect returns Socket)
-            tunnelSocket = node.connect(targetHost, targetPort)
+            // tsnet 0.14.0 API：connect(host, port, timeout) → SocketChannel
+            val channel = node.connect(targetHost, targetPort, Duration.ofSeconds(TUNNEL_CONNECT_TIMEOUT_SECONDS))
+            tunnelChannel = channel
 
-            val tunnelOut = tunnelSocket.outputStream
-            val tunnelIn = tunnelSocket.inputStream
+            val tunnelOut = java.nio.channels.Channels.newOutputStream(channel)
 
             // Send request line
             val requestLine = "$method $requestTarget HTTP/1.1\r\n"
@@ -240,14 +241,14 @@ class LocalProxyServer {
             tunnelOut.flush()
 
             // Now forward bidirectionally
-            forwardBidirectional(socket, tunnelSocket!!)
+            forwardBidirectional(socket, channel)
 
         } catch (e: Exception) {
             Log.e(TAG, "HTTP tunnel forward failed for $targetHost:$targetPort", e)
             sendErrorResponse(outputStream, 502, "Bad Gateway", "Tunnel error: ${e.message}")
         } finally {
             try {
-                tunnelSocket?.close()
+                tunnelChannel?.close()
             } catch (e: Exception) {
                 // Ignore
             }
@@ -297,6 +298,53 @@ class LocalProxyServer {
             } catch (e: Exception) {
                 // Ignore
             }
+        }
+    }
+
+    /**
+     * tsnet 0.14.0 通道转发：客户端 Socket ↔ tsnet SocketChannel。
+     */
+    private fun forwardBidirectional(clientSocket: Socket, tunnelChannel: java.nio.channels.SocketChannel) {
+        val clientIn = clientSocket.inputStream
+        val clientOut = clientSocket.outputStream
+
+        val t1 = Thread({
+            try {
+                val buf = ByteArray(8192)
+                while (running) {
+                    val bytesRead = clientIn.read(buf)
+                    if (bytesRead < 0) break
+                    val byteBuffer = java.nio.ByteBuffer.wrap(buf, 0, bytesRead)
+                    while (byteBuffer.hasRemaining()) {
+                        tunnelChannel.write(byteBuffer)
+                    }
+                }
+            } catch (e: Exception) {
+                Log.d(TAG, "Forward Client→Tunnel error", e)
+            }
+        })
+
+        val t2 = Thread({
+            try {
+                val byteBuffer = java.nio.ByteBuffer.allocate(8192)
+                while (running) {
+                    val bytesRead = tunnelChannel.read(byteBuffer)
+                    if (bytesRead < 0) break
+                    clientOut.write(byteBuffer.array(), 0, bytesRead)
+                    clientOut.flush()
+                }
+            } catch (e: Exception) {
+                Log.d(TAG, "Forward Tunnel→Client error", e)
+            }
+        })
+
+        t1.start()
+        t2.start()
+        try {
+            t1.join()
+            t2.join()
+        } catch (e: InterruptedException) {
+            // Ignore
         }
     }
 
@@ -405,6 +453,11 @@ class LocalProxyServer {
         } catch (e: Exception) {
             false
         }
+    }
+
+    companion object {
+        /** tsnet connect 超时（秒）。 */
+        private const val TUNNEL_CONNECT_TIMEOUT_SECONDS = 10L
     }
 
     private fun sendErrorResponse(

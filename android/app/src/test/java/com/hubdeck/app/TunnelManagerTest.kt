@@ -217,7 +217,7 @@ class TunnelManagerTest {
         var stopped = false
         var lastAuthKey: String? = null
 
-        override fun start(context: android.content.Context, node: com.klethron.tsnet.TailnetNode) {
+        override fun start(context: android.content.Context, node: com.klethron.tsnet.TailnetNode?) {
             started = true
         }
 

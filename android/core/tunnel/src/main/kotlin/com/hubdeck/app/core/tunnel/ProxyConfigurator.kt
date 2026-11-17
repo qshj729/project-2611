@@ -27,7 +27,7 @@ import java.util.concurrent.Executor
  * the caller should use WebViewClient.shouldInterceptRequest to intercept
  * only tailnet domains. This class does NOT fall back to global proxy properties.
  */
-class ProxyConfigurator {
+open class ProxyConfigurator {
 
     companion object {
         private const val TAG = "ProxyConfigurator"
@@ -50,7 +50,7 @@ class ProxyConfigurator {
      * @return true if ProxyOverride was applied, false if PROXY_OVERRIDE not supported
      *         (caller should use R2 fallback via shouldInterceptRequest)
      */
-    fun apply(context: Context, tailnetState: TailnetState): Boolean {
+    open fun apply(context: Context, tailnetState: TailnetState): Boolean {
         // Check if PROXY_OVERRIDE is supported on this device's WebView
         if (!WebViewFeature.isFeatureSupported(WebViewFeature.PROXY_OVERRIDE)) {
             Log.w(TAG, "WebViewFeature.PROXY_OVERRIDE not supported on this device; R2 fallback required")
@@ -88,7 +88,7 @@ class ProxyConfigurator {
     /**
      * Clear all proxy rules (everything DIRECT).
      */
-    fun clearProxy(context: Context) {
+    open fun clearProxy(context: Context) {
         if (!WebViewFeature.isFeatureSupported(WebViewFeature.PROXY_OVERRIDE)) {
             return
         }

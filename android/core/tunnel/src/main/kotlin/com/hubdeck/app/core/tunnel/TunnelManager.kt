@@ -4,15 +4,18 @@ import android.content.Context
 import android.util.Log
 import com.hubdeck.app.core.model.TailnetState
 import com.hubdeck.app.core.tailscale.TailnetRepository
+import com.klethron.tsnet.NodeStatus
+import com.klethron.tsnet.StateStore
 import com.klethron.tsnet.TailnetNode
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import java.io.File
+import java.time.Duration
 
 /**
  * Manages the tsnet node lifecycle and local proxy server.
@@ -23,10 +26,12 @@ import kotlinx.coroutines.flow.StateFlow
  * 3. ProxyConfigurator - applies WebView proxy rules
  * 4. State subscription - exposes tunnel state to UI (T3 status bar, T4 auth entry)
  *
- * Lifecycle:
- * - start() → TailnetNode.start() → awaitStatus() → NEEDS_LOGIN → login() → user authorizes → RUNNING
- * - On RUNNING: start LocalProxyServer, apply proxy rules for tailnet targets
- * - On auth failure / node offline: fallback to all DIRECT (Mode C)
+ * Lifecycle (tsnet 0.14.0 real API):
+ * - start() → TailnetNode.start(context, stateStore, authKey)
+ * - awaitStatus(status, timeout) → NodeStatus
+ * - NEEDS_LOGIN → node.login() → 轮询 awaitStatus 直到 loginUrl 出现 / 变成 RUNNING
+ * - RUNNING → 启动 LocalProxyServer + 应用 WebView 代理规则
+ * - 出错 / 掉线 → 回落到全 DIRECT（模式 C）
  *
  * All public methods are safe to call from any thread; internal work runs on IO dispatcher.
  */
@@ -40,26 +45,29 @@ class TunnelManager(
 
     private val TAG = "TunnelManager"
 
-    /** Current tunnel state, exposed for UI subscription (T3 status bar, T4 auth entry). */
+    /** tsnet 0.14.0 的 awaitStatus 需要一个"上一次状态"作为对比基线。 */
+    private val emptyStatus = NodeStatus(0L, null)
+
+    /** 当前隧道状态，供 UI 订阅。 */
     private val _tunnelState = MutableStateFlow<TunnelState>(TunnelState.Disconnected)
     override val tunnelState: StateFlow<TunnelState> = _tunnelState
 
-    /** Auth URL when node is in NEEDS_LOGIN state. */
+    /** NEEDS_LOGIN 时供浏览器打开的授权链接。 */
     private val _authUrl = MutableStateFlow<String?>(null)
     override val authUrl: StateFlow<String?> = _authUrl
 
-    /** The running tsnet node. */
+    /** 运行中的 tsnet 节点。 */
     @Volatile
     private var tailnetNode: TailnetNode? = null
 
-    /** Background job for node lifecycle monitoring. */
+    /** 节点健康检查协程。 */
     private var lifecycleJob: Job? = null
 
-    /** Whether we've attempted to start the node (prevents duplicate starts). */
+    /** 是否已经尝试过启动（避免重复起节点）。 */
     @Volatile
     private var startAttempted = false
 
-    /** Start the tunnel if we have an auth key saved. */
+    /** 若已保存 auth key，则启动隧道。 */
     fun startIfConfigured() {
         if (startAttempted) {
             Log.d(TAG, "Tunnel start already attempted, skipping")
@@ -75,7 +83,7 @@ class TunnelManager(
         }
     }
 
-    /** Start the tsnet node with the given auth key. */
+    /** 用给定 auth key 启动 tsnet 节点。 */
     fun start(authKey: String) {
         if (startAttempted) {
             Log.d(TAG, "Tunnel start already attempted, skipping")
@@ -89,31 +97,15 @@ class TunnelManager(
 
         scope.launch(Dispatchers.IO) {
             try {
-                // Create and configure the TailnetNode
-                val node = TailnetNode()
+                // tsnet 0.14.0：节点由静态工厂创建，状态存储由 StateStore 提供。
+                val node = TailnetNode.start(context, createStateStore(), authKey)
                 tailnetNode = node
+                Log.i(TAG, "TailnetNode.start() returned")
 
-                // Start the node with the auth key
-                node.start(authKey)
-                Log.i(TAG, "TailnetNode.start() called")
+                val status = node.awaitStatus(emptyStatus, Duration.ofSeconds(15))
+                Log.i(TAG, "awaitStatus() returned: ${status.state()}")
 
-                // Wait for status - this will block until RUNNING or NEEDS_LOGIN
-                val status = node.awaitStatus()
-                Log.i(TAG, "TailnetNode.awaitStatus() returned: ${status.state}")
-
-                when (status.state) {
-                    "RUNNING" -> {
-                        onNodeRunning(node, status)
-                    }
-                    "NEEDS_LOGIN" -> {
-                        onNodeNeedsLogin(node, status)
-                    }
-                    else -> {
-                        Log.w(TAG, "Unexpected node state: ${status.state}")
-                        onNodeError("Unexpected state: ${status.state}")
-                    }
-                }
-
+                handleStatus(node, status)
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to start tunnel", e)
                 onNodeError(e.message ?: "Unknown error")
@@ -121,30 +113,41 @@ class TunnelManager(
         }
     }
 
-    /** Handle successful node startup (RUNNING state). */
-    private fun onNodeRunning(node: TailnetNode, status: TailnetNode.NodeStatus) {
+    /** 根据节点状态分发处理。 */
+    private fun handleStatus(node: TailnetNode, status: NodeStatus) {
+        when (status.state()) {
+            NodeStatus.State.RUNNING -> onNodeRunning(node, status)
+            NodeStatus.State.NEEDS_LOGIN -> onNodeNeedsLogin(node, status)
+            else -> {
+                Log.w(TAG, "Unexpected node state: ${status.state()}")
+                onNodeError("Unexpected state: ${status.state()}")
+            }
+        }
+    }
+
+    /** 节点已连接（RUNNING）。 */
+    private fun onNodeRunning(node: TailnetNode, status: NodeStatus) {
         scope.launch(Dispatchers.Main) {
-            // Extract node info
-            val addresses = status.addresses ?: emptyList()
-            val nodeName = addresses.firstOrNull { it.startsWith("100.") } ?: "unknown"
+            val addresses = status.addresses().orEmpty().map { it.toString() }
             val tailnetIps = addresses.filter { it.startsWith("100.") }
+            val nodeName = addresses.firstOrNull { it.startsWith("100.") } ?: "unknown"
+            val magicDnsSuffix = extractMagicDnsSuffix(addresses)
 
             Log.i(TAG, "Node RUNNING: name=$nodeName, ips=$tailnetIps")
 
-            // Update tunnel state
             _tunnelState.value = TunnelState.Connected(
                 nodeName = nodeName,
                 tailnetIps = tailnetIps,
-                magicDnsSuffix = extractMagicDnsSuffix(addresses),
+                magicDnsSuffix = magicDnsSuffix,
             )
 
-            // Start the local proxy server
+            // 启动本地代理（把尾网流量转到 tsnet 通道）
             localProxyServer.start(context, node)
 
-            // Apply proxy configuration for tailnet targets
+            // 给 WebView 应用代理规则
             val tailnetState = TailnetState(
                 connected = true,
-                magicDnsSuffix = extractMagicDnsSuffix(addresses),
+                magicDnsSuffix = magicDnsSuffix,
                 tailnetName = extractTailnetName(addresses),
                 selfIps = tailnetIps,
                 backendState = "Running",
@@ -152,74 +155,94 @@ class TunnelManager(
             )
             proxyConfigurator.apply(context, tailnetState)
 
-            // Start monitoring node health
-            startHealthMonitoring(node)
+            // 开始轮询节点健康
+            startHealthMonitoring(node, status)
         }
     }
 
-    /** Handle NEEDS_LOGIN state - need user to authorize via login URL. */
-    private fun onNodeNeedsLogin(node: TailnetNode, status: TailnetNode.NodeStatus) {
-        val loginUrl = node.login()
-        Log.i(TAG, "Node NEEDS_LOGIN, loginUrl: $loginUrl")
+    /** 节点需要授权（NEEDS_LOGIN）。 */
+    private fun onNodeNeedsLogin(node: TailnetNode, status: NodeStatus) {
+        val knownUrl: String? = status.loginUrl()
+        Log.i(TAG, "Node NEEDS_LOGIN, loginUrl: $knownUrl")
 
         scope.launch(Dispatchers.Main) {
-            _tunnelState.value = TunnelState.Authorizing(loginUrl = loginUrl)
-            _authUrl.value = loginUrl
+            if (!knownUrl.isNullOrBlank()) {
+                _tunnelState.value = TunnelState.Authorizing(loginUrl = knownUrl)
+                _authUrl.value = knownUrl
+            }
         }
 
-        // Continue waiting for authorization to complete
         scope.launch(Dispatchers.IO) {
             try {
-                // awaitStatus() will block until the user authorizes or times out
-                val newStatus = node.awaitStatus()
-                Log.i(TAG, "Post-auth awaitStatus() returned: ${newStatus.state}")
-
-                if (newStatus.state == "RUNNING") {
-                    onNodeRunning(node, newStatus)
-                } else {
-                    onNodeError("Authorization failed or timed out, state: ${newStatus.state}")
-                }
+                // tsnet 0.14.0：login() 不返回值，授权链接从状态里取。
+                node.login()
             } catch (e: Exception) {
-                Log.e(TAG, "Error waiting for authorization", e)
-                onNodeError("Authorization error: ${e.message}")
+                Log.e(TAG, "node.login() failed", e)
+                onNodeError("Login request failed: ${e.message}")
+                return@launch
             }
+
+            var current = status
+            repeat(AUTH_POLL_ROUNDS) { round ->
+                try {
+                    val next = node.awaitStatus(current, Duration.ofSeconds(AUTH_POLL_INTERVAL_SECONDS))
+                    current = next
+                    val url: String? = next.loginUrl()
+                    if (!url.isNullOrBlank()) {
+                        scope.launch(Dispatchers.Main) {
+                            _tunnelState.value = TunnelState.Authorizing(loginUrl = url)
+                            _authUrl.value = url
+                        }
+                    }
+                    when (next.state()) {
+                        NodeStatus.State.RUNNING -> {
+                            onNodeRunning(node, next)
+                            return@launch
+                        }
+                        NodeStatus.State.STOPPED -> {
+                            onNodeError("Node stopped while authorizing")
+                            return@launch
+                        }
+                        else -> Log.d(TAG, "Still authorizing (round $round): ${next.state()}")
+                    }
+                } catch (e: Exception) {
+                    Log.e(TAG, "Error while waiting for authorization", e)
+                    onNodeError("Authorization error: ${e.message}")
+                    return@launch
+                }
+            }
+            onNodeError("Authorization timed out")
         }
     }
 
-    /** Handle node error - fallback to DIRECT mode (Mode C). */
+    /** 出错 → 回落全 DIRECT（模式 C）。 */
     private fun onNodeError(reason: String) {
         Log.w(TAG, "Tunnel error, falling back to DIRECT: $reason")
         scope.launch(Dispatchers.Main) {
             _tunnelState.value = TunnelState.Error(reason = reason)
             _authUrl.value = null
-            // Fallback: clear proxy rules → everything DIRECT
             proxyConfigurator.clearProxy(context)
             localProxyServer.stop()
-            tailnetNode?.close()
-            tailnetNode = null
+            closeNode()
             lifecycleJob?.cancel()
             lifecycleJob = null
-            startAttempted = false // Allow retry
+            startAttempted = false // 允许重试
         }
     }
 
-    /** Start periodic health checks on the node. */
-    private fun startHealthMonitoring(node: TailnetNode) {
+    /** 周期性检查节点健康。 */
+    private fun startHealthMonitoring(node: TailnetNode, initialStatus: NodeStatus) {
         lifecycleJob?.cancel()
         lifecycleJob = scope.launch(Dispatchers.IO) {
+            var last = initialStatus
             while (true) {
+                delay(HEALTH_CHECK_INTERVAL_MS)
                 try {
-                    delay(30_000) // Check every 30 seconds
-                    // Use withTimeoutOrNull to avoid blocking indefinitely on awaitStatus()
-                    val status = withTimeoutOrNull(5_000) { node.awaitStatus() }
-                    if (status == null) {
-                        Log.w(TAG, "Health check timed out")
-                        onNodeError("Health check timed out")
-                        break
-                    }
-                    if (status.state != "RUNNING") {
-                        Log.w(TAG, "Node health check failed: state = ${status.state}")
-                        onNodeError("Node went offline: ${status.state}")
+                    val next = node.awaitStatus(last, Duration.ofSeconds(HEALTH_CHECK_TIMEOUT_SECONDS))
+                    last = next
+                    if (next.state() != NodeStatus.State.RUNNING) {
+                        Log.w(TAG, "Node health check failed: state = ${next.state()}")
+                        onNodeError("Node went offline: ${next.state()}")
                         break
                     }
                 } catch (e: Exception) {
@@ -231,28 +254,46 @@ class TunnelManager(
         }
     }
 
-    /** Stop the tunnel and clean up. */
+    /** 停止隧道并清理。 */
     fun stop() {
         Log.i(TAG, "Stopping tunnel")
         lifecycleJob?.cancel()
         lifecycleJob = null
         localProxyServer.stop()
-        tailnetNode?.logout()
-        tailnetNode?.close()
-        tailnetNode = null
+        closeNode()
         proxyConfigurator.clearProxy(context)
         _tunnelState.value = TunnelState.Disconnected
         _authUrl.value = null
         startAttempted = false
     }
 
-    /** Restart the tunnel (e.g., after auth key change). */
+    /** 重启隧道（例如 auth key 变更后）。 */
     fun restart(authKey: String) {
         stop()
         start(authKey)
     }
 
-    /** Test helper: simulate node running with given addresses. */
+    /** 关闭并释放节点。 */
+    private fun closeNode() {
+        val node = tailnetNode
+        tailnetNode = null
+        if (node == null) return
+        try {
+            node.logout(Duration.ofSeconds(3))
+        } catch (e: Exception) {
+            Log.d(TAG, "logout failed", e)
+        }
+        try {
+            node.close()
+        } catch (e: Exception) {
+            Log.d(TAG, "close failed", e)
+        }
+    }
+
+    /** tsnet 0.14.0 需要一个 StateStore 持久化节点状态，这里用文件实现。 */
+    private fun createStateStore(): StateStore = FileStateStore(File(context.filesDir, "tsnet-state"))
+
+    /** 测试辅助：直接模拟节点已连接。 */
     internal fun onNodeRunningForTest(addresses: List<String>) {
         scope.launch(Dispatchers.Main) {
             val nodeName = addresses.firstOrNull { it.startsWith("100.") } ?: "unknown"
@@ -264,7 +305,7 @@ class TunnelManager(
                 magicDnsSuffix = extractMagicDnsSuffix(addresses),
             )
 
-            localProxyServer.start(context, object : com.klethron.tsnet.TailnetNode() {})
+            localProxyServer.start(context, tailnetNode)
 
             val tailnetState = TailnetState(
                 connected = true,
@@ -278,15 +319,14 @@ class TunnelManager(
         }
     }
 
-    /** Test helper: simulate node error. */
+    /** 测试辅助：直接模拟节点出错。 */
     internal fun onNodeErrorForTest(reason: String) {
         scope.launch(Dispatchers.Main) {
             _tunnelState.value = TunnelState.Error(reason = reason)
             _authUrl.value = null
             proxyConfigurator.clearProxy(context)
             localProxyServer.stop()
-            tailnetNode?.close()
-            tailnetNode = null
+            closeNode()
             lifecycleJob?.cancel()
             lifecycleJob = null
             startAttempted = false
@@ -294,10 +334,8 @@ class TunnelManager(
     }
 
     private fun extractMagicDnsSuffix(addresses: List<String>): String? {
-        // MagicDNS suffix is typically the tailnet domain, e.g., "tailnet-xyz.ts.net"
-        // In tsnet 0.4.0, addresses might include the MagicDNS FQDN
+        // MagicDNS 域名形如 "host.tailnet-xyz.ts.net" → "tailnet-xyz.ts.net"
         return addresses.firstOrNull { it.endsWith(".ts.net") }?.let { fqdn ->
-            // Extract suffix from FQDN like "host.tailnet-xyz.ts.net" -> "tailnet-xyz.ts.net"
             val parts = fqdn.split(".")
             if (parts.size >= 3) parts.drop(1).joinToString(".") else null
         }
@@ -305,5 +343,38 @@ class TunnelManager(
 
     private fun extractTailnetName(addresses: List<String>): String? {
         return extractMagicDnsSuffix(addresses)?.removeSuffix(".ts.net")
+    }
+
+    companion object {
+        private const val AUTH_POLL_ROUNDS = 60
+        private const val AUTH_POLL_INTERVAL_SECONDS = 5L
+        private const val HEALTH_CHECK_INTERVAL_MS = 30_000L
+        private const val HEALTH_CHECK_TIMEOUT_SECONDS = 5L
+    }
+}
+
+/**
+ * 简单的文件型 [StateStore]：把 tsnet 的状态字节按 key 存到目录里。
+ */
+private class FileStateStore(private val dir: File) : StateStore {
+
+    override fun read(key: String): ByteArray {
+        val file = File(dir, key.replace(Regex("[^A-Za-z0-9._-]"), "_"))
+        if (!file.exists()) return ByteArray(0)
+        return try {
+            file.readBytes()
+        } catch (e: Exception) {
+            ByteArray(0)
+        }
+    }
+
+    override fun write(key: String, bytes: ByteArray) {
+        val file = File(dir, key.replace(Regex("[^A-Za-z0-9._-]"), "_"))
+        try {
+            if (!dir.exists()) dir.mkdirs()
+            file.writeBytes(bytes)
+        } catch (e: Exception) {
+            // 状态持久化失败不阻断隧道启动
+        }
     }
 }
