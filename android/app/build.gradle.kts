@@ -35,6 +35,13 @@ android {
         }
     }
 
+
+    testOptions {
+        // JVM 单测里 android.jar 的方法默认抛 "Stub!"；
+        // 让它们返回默认值，Log/Context 之类的调用才不会把单测打挂。
+        unitTests.isReturnDefaultValues = true
+    }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
@@ -80,10 +87,12 @@ dependencies {
     implementation(project(":core:data"))
     implementation(project(":core:network"))
     implementation(project(":core:tailscale"))
+    implementation(project(":core:tunnel"))
     implementation(project(":feature:dashboard"))
     implementation(project(":feature:service"))
     implementation(project(":feature:settings"))
     implementation(project(":feature:tailscale"))
+    implementation(project(":feature:browser"))
 
     // 通用依赖走版本目录里的模块级 bundle，版本只在 gradle/libs.versions.toml 维护
     implementation(libs.bundles.app.runtime)
@@ -104,12 +113,14 @@ dependencies {
     implementation(libs.okhttp)
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.kaml)
+    implementation(libs.androidx.webkit)
 
     implementation(libs.datastore.preferences)
     implementation(libs.work.runtime.ktx)
     implementation(libs.coil.compose)
 
     testImplementation(libs.junit)
+    testImplementation(libs.mockito.core)
     testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(libs.mockwebserver)
     androidTestImplementation(libs.androidx.junit)

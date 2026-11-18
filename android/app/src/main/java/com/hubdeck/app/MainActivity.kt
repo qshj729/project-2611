@@ -1,16 +1,17 @@
 package com.hubdeck.app
 
 import android.os.Bundle
-import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
-import androidx.compose.runtime.*
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
-import com.hubdeck.app.ui.auth.AuthKeyInputScreen
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.hubdeck.app.core.tunnel.TunnelProvider
 import com.hubdeck.app.ui.HubDeckApp
 import com.hubdeck.app.ui.theme.HubDeckTheme
 import dagger.hilt.android.AndroidEntryPoint
@@ -20,32 +21,47 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
-        val sharedPrefs = getSharedPreferences("hubdeck_prefs", android.content.Context.MODE_PRIVATE)
-        val savedAuthKey = sharedPrefs.getString("tailscale_auth_key_saved", null)
-
+        enableEdgeToEdge()
         setContent {
-            enableEdgeToEdge()
             HubDeckTheme {
-                if (savedAuthKey == null) {
-                    AuthKeyInputScreen(onCompleted = {
-                        // Key saved by AuthKeyInputScreen; reload and re-compose
-                        val editor = sharedPrefs.edit()
-                        editor.putString("tailscale_auth_key_saved", "saved").apply()
-                        // Re-create activity to pick up the new key
-                        restartActivity()
-                    })
-                } else {
-                    HubDeckApp()
-                }
+                TunnelAwareApp()
             }
         }
     }
+}
 
-    private fun restartActivity() {
-        val intent = android.content.Intent(this, MainActivity::class.java)
-        intent.flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK or android.content.Intent.FLAG_ACTIVITY_CLEAR_TASK
-        startActivity(intent)
-        finish()
+@Composable
+fun TunnelAwareApp() {
+    val context = LocalContext.current.applicationContext
+
+    // Get Hilt entry point for dependencies
+    val entryPoint = dagger.hilt.android.EntryPointAccessors.fromApplication(
+        context, com.hubdeck.app.di.HubDeckApplicationEntryPoint::class.java
+    )
+
+    // Use Hilt-provided TunnelManager (singleton)
+    val tunnelManager = entryPoint.tunnelManager()
+
+    // Start tunnel on first composition if auth key is saved
+    val started = remember { mutableStateOf(false) }
+    if (!started.value) {
+        started.value = true
+        // Initialize tunnel provider (loads auth key if any)
+        val authKey = TunnelProvider.initTunnel(context)
+        if (authKey != null) {
+            tunnelManager.start(authKey)
+        } else {
+            tunnelManager.startIfConfigured()
+        }
     }
+
+    // Observe tunnel state for logging/debugging
+    val tunnelState by tunnelManager.tunnelState.collectAsStateWithLifecycle()
+
+    // Apply initial proxy config (disconnected = all DIRECT) - will be updated by tunnel manager
+    LaunchedEffect(tunnelState) {
+        // TunnelManager handles proxy config updates internally
+    }
+
+    HubDeckApp()
 }

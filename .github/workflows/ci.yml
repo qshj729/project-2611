@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, 'feat/**']
   pull_request:
 
 # CI 只读仓库，不需要写权限
@@ -54,10 +54,19 @@ jobs:
       - name: 校验 Wrapper 与仓库一致 + 列出模块
         run: |
           # 重新生成 wrapper，若与仓库里提交的不一致则 git diff 非空 → 步骤失败
-          ./gradlew wrapper --gradle-version 8.11.1
+          # 网络抖动（插件仓库解析失败、缓存服务 400）会让这一个步骤随机变红，
+          # 2026-11-13 实测 run 43416506396 因此假红 → 这里只对该步骤重试 3 次。
+          ok=0
+          for attempt in 1 2 3; do
+            if ./gradlew wrapper --gradle-version 8.11.1 && ./gradlew projects; then
+              ok=1
+              break
+            fi
+            echo "::warning::gradle 解析失败（第 $attempt 次），10 秒后重试"
+            sleep 10
+          done
+          [ "$ok" = "1" ] || exit 1
           git diff --exit-code -- gradle/wrapper gradlew gradlew.bat
-          # 模块清单（docs/design.md §7.2）
-          ./gradlew projects
 
       - name: 校验 :core:model 是纯 Kotlin 模块（不依赖 Android SDK）
         run: |
@@ -68,10 +77,25 @@ jobs:
             exit 1
           fi
 
-      - name: 构建 + 单测 + Lint
-        # 与本地 `scripts/build.sh :app:assembleDebug :app:testDebugUnitTest :app:lintDebug` 完全同命令
+      - name: 自检：通道 E 取证脚本的判定逻辑（不需要模拟器）
+        # 假 adb 复现几种坏情况（package 服务未就绪 / install 失败 / 拿不到焦点），
+        # 断言取证脚本「该红就红、该停就停」。纯 bash，~40 秒。
         working-directory: .
-        run: scripts/build.sh :app:assembleDebug :app:testDebugUnitTest :app:lintDebug
+        run: bash scripts/ci-emulator-probe.selftest.sh
+
+      - name: 构建 + 单测 + Lint
+        # testDebugUnitTest 用聚合写法：会跑所有模块的单测任务。
+        # 不要再写成 :app:testDebugUnitTest —— 测试已搬到模块内，那个任务是 NO-SOURCE，
+        # 会造成「绿灯但单测没跑」（2026-11-13 实测，见 scripts/ci-verify-tests.sh）。
+        working-directory: .
+        run: scripts/build.sh :app:assembleDebug testDebugUnitTest :app:lintDebug
+
+      - name: 校验单测真的执行了（防 NO-SOURCE 假绿）
+        working-directory: .
+        env:
+          # 每个带单测的模块都必须产出结果，防止“绿灯但没跑”
+          HUBDECK_REQUIRED_TEST_MODULES: "core/data core/network core/tailscale core/tunnel"
+        run: bash scripts/ci-verify-tests.sh
 
       - name: 上传 debug APK
         uses: actions/upload-artifact@v4
@@ -86,6 +110,6 @@ jobs:
         with:
           name: hubdeck-reports
           path: |
-            android/app/build/reports/tests/testDebugUnitTest/
+            android/**/build/reports/tests/testDebugUnitTest/
             android/app/build/reports/lint-results-debug.html
           if-no-files-found: warn

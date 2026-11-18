@@ -1,14 +1,22 @@
 package com.hubdeck.app.core.data.settings
 
+import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import com.hubdeck.app.core.model.NetworkContext
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
+import java.io.File
 
 /**
  * 设置项的单测（DataStore 的持久化本身要 Android 运行时，这里测的是**语义**：
  * 默认值、手动锁定模式、序列化）。
+ *
+ * 使用 `PreferenceDataStoreFactory` 创建文件型 DataStore，可在纯 JVM 上跑。
  */
 class SettingsTest {
 
@@ -39,16 +47,20 @@ class SettingsTest {
     }
 
     @Test
-    fun `preferences map onto the settings model`() {
-        val preferences = preferencesOf(
-            DataStoreSettingsStore.KEY_HOME_SSID to "MyHomeWiFi",
-            DataStoreSettingsStore.KEY_PROBE_INTERVAL_MINUTES to 30,
-            DataStoreSettingsStore.KEY_NETWORK_MODE_LOCK to "away",
-            DataStoreSettingsStore.KEY_PREFERRED_DEVICE to "pixel-8",
-            DataStoreSettingsStore.KEY_MAGIC_DNS_SUFFIX to "tailnet-xyz.ts.net",
-        )
+    fun `preferences map onto the settings model`() = runTest {
+        val dataStore = createTestDataStore()
+        val store = DataStoreSettingsStore(dataStore)
 
-        val settings = preferences.toSettings()
+        // Write test data
+        dataStore.edit { prefs ->
+            prefs[DataStoreSettingsStore.KEY_HOME_SSID] = "MyHomeWiFi"
+            prefs[DataStoreSettingsStore.KEY_PROBE_INTERVAL_MINUTES] = 30
+            prefs[DataStoreSettingsStore.KEY_NETWORK_MODE_LOCK] = "away"
+            prefs[DataStoreSettingsStore.KEY_PREFERRED_DEVICE] = "pixel-8"
+            prefs[DataStoreSettingsStore.KEY_MAGIC_DNS_SUFFIX] = "tailnet-xyz.ts.net"
+        }
+
+        val settings = store.current()
 
         assertEquals("MyHomeWiFi", settings.homeSsid)
         assertEquals(30, settings.probeIntervalMinutes)
@@ -58,8 +70,11 @@ class SettingsTest {
     }
 
     @Test
-    fun `empty preferences fall back to defaults`() {
-        val settings = preferencesOf().toSettings()
+    fun `empty preferences fall back to defaults`() = runTest {
+        val dataStore = createTestDataStore()
+        val store = DataStoreSettingsStore(dataStore)
+
+        val settings = store.current()
 
         assertEquals(HubDeckSettings(), settings)
     }
@@ -83,20 +98,25 @@ class SettingsTest {
         assertEquals(settings, restored)
         assertEquals("home", yaml.forceNetworkContext)
     }
-}
 
-/**
- * 构造一个内存里的 [Preferences]。
- *
- * 不用 `mutablePreferencesOf`：它在 datastore 1.1.1 里被标记为 `@RestrictTo(LIBRARY_GROUP)`，
- * 应用侧代码调用会编译失败（2026-11-11 R0 修复：`:core:data` 单测编译不过）。
- */
-private fun preferencesOf(vararg pairs: Pair<Preferences.Key<*>, Any>): Preferences =
-    object : Preferences {
-        private val values: Map<Preferences.Key<*>, Any> = pairs.toMap()
+    @Test
+    fun `observe emits updated settings`() = runTest {
+        val dataStore = createTestDataStore()
+        val store = DataStoreSettingsStore(dataStore)
 
-        @Suppress("UNCHECKED_CAST")
-        override fun <T> get(key: Preferences.Key<T>): T? = values[key] as T?
+        // Initial value
+        val initial = store.observe().first()
+        assertEquals(HubDeckSettings(), initial)
 
-        override fun asMap(): Map<Preferences.Key<*>, Any> = values
+        // Update
+        dataStore.edit { prefs ->
+            prefs[DataStoreSettingsStore.KEY_HOME_SSID] = "NewWiFi"
+        }
+
+        val updated = store.observe().first()
+        assertEquals("NewWiFi", updated.homeSsid)
     }
+
+    private fun createTestDataStore(): DataStore<Preferences> =
+        PreferenceDataStoreFactory.create { File.createTempFile("test", ".preferences_pb") }
+}

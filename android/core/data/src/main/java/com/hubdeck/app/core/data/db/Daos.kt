@@ -31,6 +31,21 @@ interface ServiceDao {
 
     @Query("DELETE FROM services WHERE id = :id")
     suspend fun deleteById(id: String)
+
+    @Query("SELECT * FROM services WHERE name LIKE '%' || :query || '%' ORDER BY pinned DESC, sortIndex ASC, name ASC")
+    suspend fun search(query: String): List<ServiceEntity>
+
+    @Query("SELECT * FROM services WHERE categoryId = :categoryId ORDER BY pinned DESC, sortIndex ASC, name ASC")
+    fun observeByCategory(categoryId: String): Flow<List<ServiceEntity>>
+
+    @Query("SELECT * FROM services WHERE pinned = 1 ORDER BY sortIndex ASC, name ASC")
+    fun observePinned(): Flow<List<ServiceEntity>>
+
+    @Query("SELECT * FROM services WHERE name LIKE '%' || :query || '%' ORDER BY pinned DESC, sortIndex ASC, name ASC")
+    fun observeByName(query: String): Flow<List<ServiceEntity>>
+
+    @Query("SELECT * FROM services WHERE id IN (:ids)")
+    suspend fun findAllById(ids: List<String>): List<ServiceEntity>
 }
 
 @Dao
@@ -69,6 +84,9 @@ interface TagDao {
     suspend fun all(): List<TagEntity>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsert(tag: TagEntity)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsertAll(tags: List<TagEntity>)
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
@@ -76,6 +94,9 @@ interface TagDao {
 
     @Query("SELECT * FROM service_tags WHERE serviceId = :serviceId")
     suspend fun tagsForService(serviceId: String): List<ServiceTagEntity>
+
+    @Query("DELETE FROM tags WHERE id = :id")
+    suspend fun deleteById(id: String)
 }
 
 @Dao

@@ -5,12 +5,15 @@ import com.hubdeck.app.core.model.HealthMode
 import com.hubdeck.app.core.model.ProbeResult
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import kotlinx.coroutines.withTimeoutOrNull
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import java.io.InterruptedIOException
+import java.net.ConnectException
 import java.net.InetSocketAddress
 import java.net.Socket
+import java.net.SocketTimeoutException
 import java.net.UnknownHostException
+import java.util.concurrent.TimeUnit
 
 /**
  * Reachability probing.
@@ -46,15 +49,15 @@ class DefaultServiceProbe(
         val port = endpoint.port ?: return ProbeResult(false, reason = "未配置端口")
         return try {
             val started = System.nanoTime()
-            val result = withTimeoutOrNull(timeoutMs.toLong()) {
-                Socket().use { socket ->
-                    socket.connect(InetSocketAddress(host, port), timeoutMs)
-                    true
-                }
+            Socket().use { socket ->
+                socket.connect(InetSocketAddress(host, port), timeoutMs)
             }
             val latency = ((System.nanoTime() - started) / 1_000_000).toInt()
-            if (result == true) ProbeResult(reachable = true, latencyMs = latency)
-            else ProbeResult(reachable = false, reason = "连接超时")
+            ProbeResult(reachable = true, latencyMs = latency)
+        } catch (e: SocketTimeoutException) {
+            ProbeResult(reachable = false, reason = "连接超时")
+        } catch (e: ConnectException) {
+            ProbeResult(reachable = false, reason = "连接被拒绝")
         } catch (e: UnknownHostException) {
             ProbeResult(reachable = false, reason = "DNS 解析失败")
         } catch (e: Exception) {
@@ -64,30 +67,45 @@ class DefaultServiceProbe(
 
     private suspend fun probeHttp(endpoint: Endpoint, path: String, timeoutMs: Int): ProbeResult {
         val host = endpoint.host?.takeIf { it.isNotBlank() } ?: return ProbeResult(false, reason = "未配置主机名")
-        val port = endpoint.port
-        val scheme = if (endpoint.urlTemplate.startsWith("https")) "https" else "http"
-        val url = buildString {
-            append(scheme).append("://").append(host)
-            if (port != null) append(':').append(port)
-            append(if (path.startsWith('/')) path else "/$path")
-        }
+        val url = buildProbeUrl(endpoint, path)
         return try {
             val started = System.nanoTime()
-            val response = withTimeoutOrNull(timeoutMs.toLong()) {
-                val request = Request.Builder().url(url).head().build()
-                client.newCall(request).execute().use { it.code }
-            }
+            val request = Request.Builder().url(url).head().build()
+            val call = client.newCall(request)
+            // 用 OkHttp 自己的 call timeout，不用协程超时包住阻塞调用：
+            // 阻塞 IO 不响应协程取消，withTimeout 只会把调用挂到 socket 超时才返回。
+            call.timeout().timeout(timeoutMs.toLong(), TimeUnit.MILLISECONDS)
+            val code = call.execute().use { it.code }
             val latency = ((System.nanoTime() - started) / 1_000_000).toInt()
-            when (response) {
-                null -> ProbeResult(reachable = false, reason = "请求超时")
+            when (code) {
                 in 200..399 -> ProbeResult(reachable = true, latencyMs = latency)
                 401, 403 -> ProbeResult(reachable = true, latencyMs = latency, reason = "需要登录")
-                else -> ProbeResult(reachable = false, reason = "HTTP $response")
+                else -> ProbeResult(reachable = false, reason = "HTTP $code")
             }
+        } catch (e: InterruptedIOException) {
+            ProbeResult(reachable = false, reason = "请求超时")
+        } catch (e: ConnectException) {
+            ProbeResult(reachable = false, reason = "连接失败")
         } catch (e: UnknownHostException) {
             ProbeResult(reachable = false, reason = "DNS 解析失败")
         } catch (e: Exception) {
             ProbeResult(reachable = false, reason = e.message ?: "请求失败")
         }
+    }
+}
+
+/**
+ * 探测用的实际 URL：scheme 取自端点模板，host/port 取自端点配置。
+ *
+ * 抽成顶层函数是为了能直接单测（https 场景无法用明文 MockWebServer 验证握手）。
+ */
+internal fun buildProbeUrl(endpoint: Endpoint, path: String): String {
+    val host = endpoint.host?.takeIf { it.isNotBlank() } ?: return ""
+    val scheme = if (endpoint.urlTemplate.startsWith("https")) "https" else "http"
+    return buildString {
+        append(scheme).append("://").append(host)
+        val port = endpoint.port
+        if (port != null) append(':').append(port)
+        append(if (path.startsWith('/')) path else "/$path")
     }
 }

@@ -8,18 +8,27 @@ import com.hubdeck.app.core.data.db.EndpointDao
 import com.hubdeck.app.core.data.db.HealthDao
 import com.hubdeck.app.core.data.db.HubDeckDatabase
 import com.hubdeck.app.core.data.db.ServiceDao
+import com.hubdeck.app.core.data.settings.SettingsStore
+import com.hubdeck.app.core.data.settings.SettingsStores
 import com.hubdeck.app.core.network.DefaultServiceProbe
 import com.hubdeck.app.core.network.ServiceProbe
 import com.hubdeck.app.core.security.CredentialStore
 import com.hubdeck.app.core.tailscale.OkHttpTailscaleControlApiClient
 import com.hubdeck.app.core.tailscale.OkHttpTailscaleLocalApiClient
+import com.hubdeck.app.core.tailscale.TailnetRepository
 import com.hubdeck.app.core.tailscale.TailscaleControlApiClient
 import com.hubdeck.app.core.tailscale.TailscaleLocalApiClient
+import com.hubdeck.app.core.tunnel.LocalProxyServer
+import com.hubdeck.app.core.tunnel.ProxyConfigurator
+import com.hubdeck.app.core.tunnel.TunnelManager
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import okhttp3.OkHttpClient
 import java.util.concurrent.TimeUnit
 import javax.inject.Singleton
@@ -27,6 +36,10 @@ import javax.inject.Singleton
 @Module
 @InstallIn(SingletonComponent::class)
 object AppModule {
+
+    @Provides
+    @Singleton
+    fun provideProxyConfigurator(): ProxyConfigurator = ProxyConfigurator()
 
     @Provides
     @Singleton
@@ -57,6 +70,12 @@ object AppModule {
         credentialDao: CredentialDao,
     ): CredentialStore = CredentialStore(context, credentialDao)
 
+    // 设置读写入口：:core:data 里的 DataStore 实现（SettingsStores.create）
+    @Provides
+    @Singleton
+    fun provideSettingsStore(@ApplicationContext context: Context): SettingsStore =
+        SettingsStores.create(context)
+
     @Provides
     @Singleton
     fun provideOkHttpClient(): OkHttpClient = OkHttpClient.Builder()
@@ -83,4 +102,36 @@ object AppModule {
     @Provides
     @Singleton
     fun provideServiceProbe(client: OkHttpClient): ServiceProbe = DefaultServiceProbe(client)
+
+    @Provides
+    @Singleton
+    fun provideTailnetRepository(
+        localApi: TailscaleLocalApiClient,
+        controlApi: TailscaleControlApiClient,
+        credentials: CredentialStore,
+    ): TailnetRepository = TailnetRepository(localApi, controlApi, credentials)
+
+    @Provides
+    @Singleton
+    fun provideTunnelScope(): CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
+
+    @Provides
+    @Singleton
+    fun provideTunnelManager(
+        @ApplicationContext context: Context,
+        tailnetRepository: TailnetRepository,
+        proxyConfigurator: ProxyConfigurator,
+        localProxyServer: LocalProxyServer,
+        scope: CoroutineScope,
+    ): TunnelManager = TunnelManager(
+        context = context,
+        tailnetRepository = tailnetRepository,
+        proxyConfigurator = proxyConfigurator,
+        localProxyServer = localProxyServer,
+        scope = scope,
+    )
+
+    @Provides
+    @Singleton
+    fun provideLocalProxyServer(): LocalProxyServer = LocalProxyServer()
 }

@@ -105,7 +105,7 @@ class TailscaleControlApiClientTest {
         server.enqueue(MockResponse().setBody("[]"))
         client(token = "token").devices("example.com")
         val request = server.takeRequest()
-        assertEquals("/api/v2/tailnet/example.com/devices", request.path)
-        assertEquals("Bearer token", request.getHeader("Authorization"))
+        assertEquals("/api/v2/tailnet/example.com/devices", request?.path)
+        assertEquals("Bearer token", request?.getHeader("Authorization"))
     }
 }

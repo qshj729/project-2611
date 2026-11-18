@@ -8,6 +8,9 @@ import com.hubdeck.app.core.data.db.HealthDao
 import com.hubdeck.app.core.data.db.HealthSampleEntity
 import com.hubdeck.app.core.data.db.ServiceDao
 import com.hubdeck.app.core.data.db.ServiceEntity
+import com.hubdeck.app.core.data.db.TagDao
+import com.hubdeck.app.core.data.db.TagEntity
+import com.hubdeck.app.core.data.db.ServiceTagEntity
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.emitAll
@@ -133,20 +136,8 @@ class FakeCategoryDao : CategoryDao {
         emitAll(state)
     }
 
-    override suspend fun all(): List<CategoryEntity> = state.value
-
-    override suspend fun findById(id: String): CategoryEntity? = state.value.firstOrNull { it.id == id }
-
-    override suspend fun upsert(category: CategoryEntity) {
-        state.value = state.value.filterNot { it.id == category.id } + category
-    }
-
     override suspend fun upsertAll(categories: List<CategoryEntity>) {
-        categories.forEach { upsert(it) }
-    }
-
-    override suspend fun deleteById(id: String) {
-        state.value = state.value.filterNot { it.id == id }
+        state.value = categories
     }
 }
 
@@ -182,5 +173,35 @@ class FakeHealthDao : HealthDao {
 
     override suspend fun prune(olderThan: Long) {
         state.value = state.value.filterNot { it.checkedAt < olderThan }
+    }
+}
+
+class FakeTagDao : TagDao {
+    private val state = MutableStateFlow<List<TagEntity>>(emptyList())
+
+    var observeError: Throwable? = null
+
+    fun seed(vararg entities: TagEntity) {
+        state.value = entities.toList()
+    }
+
+    override suspend fun all(): List<TagEntity> = state.value
+
+    override suspend fun upsert(tag: TagEntity) {
+        state.value = state.value.filterNot { it.id == tag.id } + tag
+    }
+
+    override suspend fun upsertAll(tags: List<TagEntity>) {
+        tags.forEach { upsert(it) }
+    }
+
+    override suspend fun linkAll(links: List<ServiceTagEntity>) {
+        // No-op for tests
+    }
+
+    override suspend fun tagsForService(serviceId: String): List<ServiceTagEntity> = emptyList()
+
+    override suspend fun deleteById(id: String) {
+        state.value = state.value.filterNot { it.id == id }
     }
 }

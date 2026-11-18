@@ -36,7 +36,9 @@ jobs:
   emulator:
     name: 模拟器启动 + 截图取证
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    # 该 runner 没有 /dev/kvm，模拟器走纯软件模拟（TCG）：
+    # 冷启动 ~7 分钟 + install ~4 分钟 + 等焦点数分钟，45 分钟不够用
+    timeout-minutes: 75
 
     defaults:
       run:
@@ -89,6 +91,11 @@ jobs:
           arch: x86_64
           profile: pixel_6
           disable-animations: true
+          # 软模拟下机器很慢，给足开机时间；内存/核数按 runner 实际配额来
+          emulator-boot-timeout: 1200
+          emulator-options: >-
+            -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim
+            -memory 3072 -cores 2 -no-passive-gps
           script: scripts/ci-emulator-probe.sh
 
       - name: 收集截图 / UI 树 / logcat
@@ -100,6 +107,7 @@ jobs:
           if-no-files-found: warn
 
       - name: 上传被测 APK
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: hubdeck-emulator-apk

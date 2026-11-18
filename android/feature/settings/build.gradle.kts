@@ -36,12 +36,22 @@ dependencies {
     api(project(":core:model"))
     implementation(project(":core:data"))
     implementation(project(":core:tailscale"))
+    implementation(project(":core:tunnel"))
 
     implementation(platform(libs.compose.bom))
     implementation(libs.bundles.compose.runtime)
+    implementation(libs.compose.foundation)
     implementation(libs.bundles.feature.viewmodel)
     implementation(libs.bundles.feature.hilt)
     ksp(libs.hilt.compiler)
 
     testImplementation(libs.junit)
+
+    // UI 测试（别名与 libs.versions.toml 对齐：compose-ui-test-*）
+    androidTestImplementation(platform(libs.compose.bom))
+    androidTestImplementation(libs.compose.ui.test.junit4)
+    debugImplementation(libs.compose.ui.test.manifest)
+    androidTestImplementation(libs.androidx.activity.compose)
+    debugImplementation(libs.compose.ui.tooling)
+    debugImplementation(libs.compose.ui.tooling.preview)
 }
