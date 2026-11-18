@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  MyApps 图标单色层（Android 13+ 主题图标）。
+  只保留字母 M 的剪影，系统按主题着色。
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <path
+        android:fillColor="#FF000000"
+        android:pathData="M32,78 L32,30 L43,30 L54,52 L65,30 L76,30 L76,78 L67,78 L67,45 L58,62 L50,62 L41,45 L41,78 Z" />
+</vector>
