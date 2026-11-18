@@ -63,6 +63,15 @@ jobs:
         working-directory: .
         run: scripts/build.sh :app:assembleDebug
 
+      - name: 校验 APK 签名指纹
+        working-directory: android
+        run: |
+          apk_path=app/build/outputs/apk/debug/app-debug.apk
+          echo "=== APK 签名指纹 ==="
+          apksigner verify --print-certs "$apk_path"
+          echo "=== 期望指纹 (SHA-256) ==="
+          echo "97:B1:C9:C1:0D:F2:2F:81:D4:77:27:C9:F2:2B:39:7C:63:6D:DC:4B:47:07:8B:DD:08:BF:A3:3A:FB:0A:BC:8E"
+
       - name: 上传隧道版 debug APK
         uses: actions/upload-artifact@v4
         with:

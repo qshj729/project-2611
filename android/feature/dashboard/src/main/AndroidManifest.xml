@@ -33,7 +33,7 @@
             android:exported="false"
             android:noHistory="true"
             android:taskAffinity=""
-            android:theme="@style/Theme.HubDeck.Widget.Transparent" />
+            android:theme="@style/Theme.MyApps.Widget.Transparent" />
 
     </application>
 

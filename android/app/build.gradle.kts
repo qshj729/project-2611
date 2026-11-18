@@ -1,3 +1,11 @@
+import java.util.Properties
+
+// 读取签名配置（android/keystore/myapps-signing.properties）
+val signingProps = Properties().apply {
+    val f = rootProject.file("keystore/myapps-signing.properties")
+    if (f.exists()) f.inputStream().use { load(it) }
+}
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -12,7 +20,7 @@ android {
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.hubdeck.app"
+        applicationId = "top.quup.myapps"
         minSdk = 34
         targetSdk = 35
         versionCode = 1
@@ -21,13 +29,26 @@ android {
         vectorDrawables.useSupportLibrary = true
     }
 
+    signingConfigs {
+        create("myapps") {
+            if (signingProps.isNotEmpty()) {
+                storeFile = rootProject.file("keystore/${signingProps.getProperty("storeFile")}")
+                storeType = signingProps.getProperty("storeType")   // PKCS12
+                keyAlias = signingProps.getProperty("keyAlias")
+                storePassword = signingProps.getProperty("storePassword")
+                keyPassword = signingProps.getProperty("keyPassword")
+            }
+        }
+    }
+
     buildTypes {
         debug {
-            applicationIdSuffix = ".debug"
+            signingConfig = signingConfigs.getByName("myapps")
         }
         release {
             isMinifyEnabled = true
             isShrinkResources = true
+            signingConfig = signingConfigs.getByName("myapps")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro",
