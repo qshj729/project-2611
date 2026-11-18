@@ -32,7 +32,7 @@ android {
     signingConfigs {
         create("myapps") {
             if (signingProps.isNotEmpty()) {
-                storeFile = rootProject.file("keystore/${signingProps.getProperty("storeFile")}")
+                storeFile = rootProject.file(signingProps.getProperty("storeFile"))
                 storeType = signingProps.getProperty("storeType")   // PKCS12
                 keyAlias = signingProps.getProperty("keyAlias")
                 storePassword = signingProps.getProperty("storePassword")
