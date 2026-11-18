@@ -8,6 +8,8 @@ import com.hubdeck.app.core.data.db.EndpointDao
 import com.hubdeck.app.core.data.db.HealthDao
 import com.hubdeck.app.core.data.db.HubDeckDatabase
 import com.hubdeck.app.core.data.db.ServiceDao
+import com.hubdeck.app.core.data.settings.SettingsStore
+import com.hubdeck.app.core.data.settings.SettingsStores
 import com.hubdeck.app.core.network.DefaultServiceProbe
 import com.hubdeck.app.core.network.ServiceProbe
 import com.hubdeck.app.core.security.CredentialStore
@@ -67,6 +69,12 @@ object AppModule {
         @ApplicationContext context: Context,
         credentialDao: CredentialDao,
     ): CredentialStore = CredentialStore(context, credentialDao)
+
+    // 设置读写入口：:core:data 里的 DataStore 实现（SettingsStores.create）
+    @Provides
+    @Singleton
+    fun provideSettingsStore(@ApplicationContext context: Context): SettingsStore =
+        SettingsStores.create(context)
 
     @Provides
     @Singleton
