@@ -11,11 +11,21 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Error
+import androidx.compose.material.icons.filled.VpnKey
+import androidx.compose.material.icons.filled.VpnKeyOff
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -23,6 +33,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -149,9 +160,9 @@ fun TailscaleScreen(
 
     Scaffold(
         topBar = { TopAppBar(title = { Text("Tailscale") }, navigationIcon = {
-            androidx.compose.material3.IconButton(onClick = onBack) {
-                androidx.compose.material3.Icon(
-                    imageVector = androidx.compose.material.icons.Icons.Default.ArrowBack,
+            IconButton(onClick = onBack) {
+                Icon(
+                    imageVector = Icons.Default.ArrowBack,
                     contentDescription = "返回"
                 )
             }
@@ -176,12 +187,12 @@ fun TailscaleScreen(
                                 modifier = Modifier.padding(top = 8.dp).fillMaxWidth(),
                                 verticalAlignment = Alignment.CenterVertically,
                             ) {
-                                androidx.compose.material3.Icon(
-                                    imageVector = androidx.compose.material.icons.Icons.Default.VpnKey,
+                                Icon(
+                                    imageVector = Icons.Default.VpnKey,
                                     contentDescription = "已连接",
                                     tint = MaterialTheme.colorScheme.primary,
                                 )
-                                androidx.compose.foundation.layout.Spacer(modifier = androidx.compose.foundation.layout.Modifier.width(8.dp))
+                                Spacer(modifier = Modifier.width(8.dp))
                                 Text(
                                     "已连接到 tailnet",
                                     style = MaterialTheme.typography.bodyMedium,
@@ -207,11 +218,11 @@ fun TailscaleScreen(
                                 modifier = Modifier.padding(top = 8.dp).fillMaxWidth(),
                                 verticalAlignment = Alignment.CenterVertically,
                             ) {
-                                androidx.compose.material3.CircularProgressIndicator(
-                                    modifier = androidx.compose.foundation.layout.Modifier.size(20.dp),
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(20.dp),
                                     strokeWidth = 2.dp,
                                 )
-                                androidx.compose.foundation.layout.Spacer(modifier = androidx.compose.foundation.layout.Modifier.width(8.dp))
+                                Spacer(modifier = Modifier.width(8.dp))
                                 Text(
                                     "等待授权中...",
                                     style = MaterialTheme.typography.bodyMedium,
@@ -236,11 +247,11 @@ fun TailscaleScreen(
                                 modifier = Modifier.padding(top = 8.dp).fillMaxWidth(),
                                 verticalAlignment = Alignment.CenterVertically,
                             ) {
-                                androidx.compose.material3.CircularProgressIndicator(
-                                    modifier = androidx.compose.foundation.layout.Modifier.size(20.dp),
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(20.dp),
                                     strokeWidth = 2.dp,
                                 )
-                                androidx.compose.foundation.layout.Spacer(modifier = androidx.compose.foundation.layout.Modifier.width(8.dp))
+                                Spacer(modifier = Modifier.width(8.dp))
                                 Text(
                                     "正在连接...",
                                     style = MaterialTheme.typography.bodyMedium,
@@ -253,12 +264,12 @@ fun TailscaleScreen(
                                 modifier = Modifier.padding(top = 8.dp).fillMaxWidth(),
                                 verticalAlignment = Alignment.CenterVertically,
                             ) {
-                                androidx.compose.material3.Icon(
-                                    imageVector = androidx.compose.material.icons.Icons.Default.Error,
+                                Icon(
+                                    imageVector = Icons.Default.Error,
                                     contentDescription = "错误",
                                     tint = MaterialTheme.colorScheme.error,
                                 )
-                                androidx.compose.foundation.layout.Spacer(modifier = androidx.compose.foundation.layout.Modifier.width(8.dp))
+                                Spacer(modifier = Modifier.width(8.dp))
                                 Text(
                                     "连接失败",
                                     style = MaterialTheme.typography.bodyMedium,
@@ -277,7 +288,7 @@ fun TailscaleScreen(
                                 }
                                 Button(
                                     onClick = { viewModel.clearAuthKey() },
-                                    colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                                    colors = ButtonDefaults.buttonColors(
                                         containerColor = MaterialTheme.colorScheme.errorContainer,
                                         contentColor = MaterialTheme.colorScheme.onErrorContainer
                                     )
@@ -291,12 +302,12 @@ fun TailscaleScreen(
                                 modifier = Modifier.padding(top = 8.dp).fillMaxWidth(),
                                 verticalAlignment = Alignment.CenterVertically,
                             ) {
-                                androidx.compose.material3.Icon(
-                                    imageVector = androidx.compose.material.icons.Icons.Default.VpnKeyOff,
+                                Icon(
+                                    imageVector = Icons.Default.VpnKeyOff,
                                     contentDescription = "未连接",
                                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
-                                androidx.compose.foundation.layout.Spacer(modifier = androidx.compose.foundation.layout.Modifier.width(8.dp))
+                                Spacer(modifier = Modifier.width(8.dp))
                                 Text(
                                     "未连接内网",
                                     style = MaterialTheme.typography.bodyMedium,
@@ -330,7 +341,7 @@ fun TailscaleScreen(
                     Text("本机地址：${state.selfIps.joinToString(", ").ifBlank { "-" }}")
                     Text("来源：${state.source}")
                     Row(modifier = Modifier.padding(top = 8.dp).fillMaxWidth()) {
-                        androidx.compose.material3.TextButton(onClick = { viewModel.refresh() }) {
+                        TextButton(onClick = { viewModel.refresh() }) {
                             Text("刷新状态")
                         }
                     }

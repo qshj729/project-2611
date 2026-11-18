@@ -40,6 +40,7 @@ dependencies {
 
     implementation(platform(libs.compose.bom))
     implementation(libs.bundles.compose.runtime)
+    implementation(libs.compose.foundation)
     implementation(libs.bundles.feature.viewmodel)
     implementation(libs.bundles.feature.hilt)
     ksp(libs.hilt.compiler)

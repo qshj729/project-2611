@@ -2,7 +2,6 @@
 
 package com.hubdeck.feature.settings
 
-import android.app.AlertDialog
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
@@ -19,7 +18,8 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.semantics
+import androidx.compose.material.icons.Icons
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -36,10 +36,10 @@ import androidx.compose.material3.Slider
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
-import androidx.compose.material.icons.Icons.Default.ArrowBack
-import androidx.compose.material.icons.Icons.Default.Clear
-import androidx.compose.material.icons.Icons.Default.ExpandLess
-import androidx.compose.material.icons.Icons.Default.ExpandMore
+import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Clear
+import androidx.compose.material.icons.filled.ExpandLess
+import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -219,7 +219,7 @@ fun SettingsScreen(
                 navigationIcon = {
                     androidx.compose.material3.IconButton(onClick = onBack) {
                         androidx.compose.material3.Icon(
-                            imageVector = androidx.compose.material.icons.Icons.Default.ArrowBack,
+                            imageVector = Icons.Default.ArrowBack,
                             contentDescription = "返回"
                         )
                     }
@@ -252,7 +252,12 @@ fun SettingsScreen(
             )
 
             // 4. 网络模式
-            NetworkModeCard(viewModel = viewModel, settings = settings, homeSsidText = homeSsidText)
+            NetworkModeCard(
+                viewModel = viewModel,
+                settings = settings,
+                homeSsidText = homeSsidText,
+                onHomeSsidTextChange = { homeSsidText = it }
+            )
 
             // 5. 探测设置
             ProbeSettingsCard(viewModel = viewModel, settings = settings)
@@ -420,12 +425,12 @@ private fun HomarrImportCard(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(vertical = 4.dp)
-                    .semantics { clickable { onExpandedChange(!homarrYamlExpanded) } },
+                    .clickable { onExpandedChange(!homarrYamlExpanded) },
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text("从 Homarr 导入", style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
                 Icon(
-                    imageVector = if (homarrYamlExpanded) androidx.compose.material.icons.Icons.Default.ExpandLess else androidx.compose.material.icons.Icons.Default.ExpandMore,
+                    imageVector = if (homarrYamlExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
                     contentDescription = if (homarrYamlExpanded) "收起" else "展开",
                 )
             }
@@ -459,6 +464,7 @@ private fun NetworkModeCard(
     viewModel: SettingsViewModel,
     settings: HubDeckSettings,
     homeSsidText: String,
+    onHomeSsidTextChange: (String) -> Unit,
 ) {
     Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
         Column(modifier = Modifier.padding(16.dp)) {
@@ -471,16 +477,22 @@ private fun NetworkModeCard(
 
             OutlinedTextField(
                 value = homeSsidText,
-                onValueChange = { homeSsidText = it },
+                onValueChange = { newText ->
+                    onHomeSsidTextChange(newText)
+                    viewModel.setHomeSsid(newText)
+                },
                 label = { Text("家中 Wi-Fi SSID") },
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(top = 8.dp),
                 trailingIcon = {
                     if (homeSsidText.isNotBlank()) {
-                        IconButton(onClick = { viewModel.setHomeSsid("") }) {
+                        IconButton(onClick = {
+                            onHomeSsidTextChange("")
+                            viewModel.setHomeSsid("")
+                        }) {
                             Icon(
-                                imageVector = androidx.compose.material.icons.Icons.Default.Clear,
+                                imageVector = Icons.Default.Clear,
                                 contentDescription = "清除 SSID",
                             )
                         }
@@ -620,7 +632,7 @@ private fun AppearanceCard(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .semantics { clickable { viewModel.setThemePreference(theme) } }
+                            .clickable { viewModel.setThemePreference(theme) }
                             .background(if (isSelected) MaterialTheme.colorScheme.secondaryContainer else androidx.compose.ui.graphics.Color.Transparent),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
@@ -628,7 +640,7 @@ private fun AppearanceCard(
                             selected = isSelected,
                             onClick = { viewModel.setThemePreference(theme) },
                         )
-                        Spacer(modifier = androidx.compose.foundation.layout.Modifier.width(12.dp))
+                        Spacer(modifier = Modifier.width(12.dp))
                         Text(
                             text = when (theme) {
                                 ThemePreference.SYSTEM -> "跟随系统"
@@ -653,7 +665,7 @@ private fun AppearanceCard(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .semantics { clickable { viewModel.setCardDensity(density) } }
+                            .clickable { viewModel.setCardDensity(density) }
                             .background(if (isSelected) MaterialTheme.colorScheme.secondaryContainer else androidx.compose.ui.graphics.Color.Transparent),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
@@ -661,7 +673,7 @@ private fun AppearanceCard(
                             selected = isSelected,
                             onClick = { viewModel.setCardDensity(density) },
                         )
-                        Spacer(modifier = androidx.compose.foundation.layout.Modifier.width(12.dp))
+                        Spacer(modifier = Modifier.width(12.dp))
                         Text(
                             text = when (density) {
                                 CardDensityPreference.COMPACT -> "紧凑"
@@ -706,6 +718,7 @@ private fun CredentialsCard(
 private fun AboutCard(
     viewModel: SettingsViewModel,
 ) {
+    val context = LocalContext.current
     Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text("关于", style = MaterialTheme.typography.titleMedium)
@@ -752,7 +765,7 @@ private fun AboutCard(
                             android.net.Uri.parse("https://github.com/qshj729/hubdeck")
                         )
                         intent.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
-                        LocalContext.current.startActivity(intent)
+                        context.startActivity(intent)
                     },
                 ) {
                     Text("GitHub")
