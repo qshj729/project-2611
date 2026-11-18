@@ -41,6 +41,13 @@ class TunnelManager(
     private val proxyConfigurator: ProxyConfigurator,
     private val localProxyServer: LocalProxyServer,
     private val scope: CoroutineScope,
+    /**
+     * 节点启动器：生产环境用 tsnet 的 `TailnetNode.start`；
+     * 单测注入假实现（JVM 单测跑不了 tsnet 的 native 库），返回 null 表示「不接真实节点」。
+     */
+    private val nodeStarter: (String) -> TailnetNode? = { authKey ->
+        TailnetNode.start(context, createStateStore(), authKey)
+    },
 ) : TunnelStateProvider {
 
     private val TAG = "TunnelManager"
@@ -102,8 +109,13 @@ class TunnelManager(
         scope.launch(Dispatchers.IO) {
             try {
                 // tsnet 0.14.0：节点由静态工厂创建，状态存储由 StateStore 提供。
-                val node = TailnetNode.start(context, createStateStore(), authKey)
+                val node = nodeStarter(authKey)
                 tailnetNode = node
+                if (node == null) {
+                    // 单测替身：没有真实节点，只驱动状态机。
+                    Log.i(TAG, "nodeStarter returned no node (test double), skipping status handling")
+                    return@launch
+                }
                 Log.i(TAG, "TailnetNode.start() returned")
 
                 val status = node.awaitStatus(initialStatus, Duration.ofSeconds(15))
@@ -113,6 +125,10 @@ class TunnelManager(
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to start tunnel", e)
                 onNodeError(e.message ?: "Unknown error")
+            } catch (e: LinkageError) {
+                // tsnet 的 native 库缺失/架构不匹配：同样要落到错误态，不能让调用方崩。
+                Log.e(TAG, "Failed to load tsnet native library", e)
+                onNodeError(e.message ?: "tsnet native library unavailable")
             }
         }
     }

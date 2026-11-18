@@ -8,8 +8,8 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
+import org.mockito.Mockito
 import org.mockito.Mockito.mock
-import org.mockito.Mockito.when
 
 /**
  * TunnelProvider 单测 - 验证 Auth Key 存取与初始化逻辑。
@@ -33,15 +33,15 @@ class TunnelProviderTest {
         mockPrefs = mock(SharedPreferences::class.java)
         mockEditor = mock(SharedPreferences.Editor::class.java)
 
-        when(mockContext.getSharedPreferences("hubdeck_prefs", Context.MODE_PRIVATE)).thenReturn(mockPrefs)
-        when(mockPrefs.edit()).thenReturn(mockEditor)
-        when(mockEditor.putString(anyString(), anyString())).thenReturn(mockEditor)
-        when(mockEditor.apply()).thenReturn(Unit)
+        Mockito.when(mockContext.getSharedPreferences("hubdeck_prefs", Context.MODE_PRIVATE)).thenReturn(mockPrefs)
+        Mockito.when(mockPrefs.edit()).thenReturn(mockEditor)
+        Mockito.when(mockEditor.putString(Mockito.anyString(), Mockito.anyString())).thenReturn(mockEditor)
+        Mockito.when(mockEditor.remove(Mockito.anyString())).thenReturn(mockEditor)
     }
 
     @Test
     fun `getAuthKey returns saved key from SharedPreferences`() {
-        when(mockPrefs.getString("tailscale_auth_key_saved", null)).thenReturn("tskey-abc123")
+        Mockito.when(mockPrefs.getString("tailscale_auth_key_saved", null)).thenReturn("tskey-abc123")
 
         val key = TunnelProvider.getAuthKey(mockContext)
 
@@ -50,7 +50,7 @@ class TunnelProviderTest {
 
     @Test
     fun `getAuthKey returns null for placeholder value`() {
-        when(mockPrefs.getString("tailscale_auth_key_saved", null)).thenReturn("placeholder-key-no-env")
+        Mockito.when(mockPrefs.getString("tailscale_auth_key_saved", null)).thenReturn("placeholder-key-no-env")
 
         val key = TunnelProvider.getAuthKey(mockContext)
 
@@ -59,7 +59,7 @@ class TunnelProviderTest {
 
     @Test
     fun `getAuthKey returns null for skipped value`() {
-        when(mockPrefs.getString("tailscale_auth_key_saved", null)).thenReturn("skipped")
+        Mockito.when(mockPrefs.getString("tailscale_auth_key_saved", null)).thenReturn("skipped")
 
         val key = TunnelProvider.getAuthKey(mockContext)
 
@@ -68,7 +68,7 @@ class TunnelProviderTest {
 
     @Test
     fun `getAuthKey returns null for blank value`() {
-        when(mockPrefs.getString("tailscale_auth_key_saved", null)).thenReturn("   ")
+        Mockito.when(mockPrefs.getString("tailscale_auth_key_saved", null)).thenReturn("   ")
 
         val key = TunnelProvider.getAuthKey(mockContext)
 
@@ -77,14 +77,14 @@ class TunnelProviderTest {
 
     @Test
     fun `getAuthKey falls back to environment variable`() {
-        when(mockPrefs.getString("tailscale_auth_key_saved", null)).thenReturn(null)
+        Mockito.when(mockPrefs.getString("tailscale_auth_key_saved", null)).thenReturn(null)
         // Note: We can't easily mock System.getenv, so this test documents expected behavior
         // In real usage, if env var HUB_TAILSCALE_AUTHKEY is set, it will be used
     }
 
     @Test
     fun `initTunnel returns auth key when available`() {
-        when(mockPrefs.getString("tailscale_auth_key_saved", null)).thenReturn("tskey-test")
+        Mockito.when(mockPrefs.getString("tailscale_auth_key_saved", null)).thenReturn("tskey-test")
 
         val result = TunnelProvider.initTunnel(mockContext)
 
@@ -94,7 +94,7 @@ class TunnelProviderTest {
 
     @Test
     fun `initTunnel returns null when no auth key`() {
-        when(mockPrefs.getString("tailscale_auth_key_saved", null)).thenReturn(null)
+        Mockito.when(mockPrefs.getString("tailscale_auth_key_saved", null)).thenReturn(null)
 
         val result = TunnelProvider.initTunnel(mockContext)
 
@@ -119,14 +119,14 @@ class TunnelProviderTest {
 
     @Test
     fun `hasAuthKey returns true when key exists`() {
-        when(mockPrefs.getString("tailscale_auth_key_saved", null)).thenReturn("tskey-abc")
+        Mockito.when(mockPrefs.getString("tailscale_auth_key_saved", null)).thenReturn("tskey-abc")
 
         assertTrue(TunnelProvider.hasAuthKey(mockContext))
     }
 
     @Test
     fun `hasAuthKey returns false when key missing`() {
-        when(mockPrefs.getString("tailscale_auth_key_saved", null)).thenReturn(null)
+        Mockito.when(mockPrefs.getString("tailscale_auth_key_saved", null)).thenReturn(null)
 
         assertFalse(TunnelProvider.hasAuthKey(mockContext))
     }

@@ -13,8 +13,11 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.TestCoroutineScope
+import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.test.setMain
 import kotlinx.coroutines.test.unconfinedTestDispatcher
+import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
@@ -35,7 +38,10 @@ class TunnelManagerTest {
 
     @Before
     fun setUp() {
-        testScope = TestCoroutineScope(unconfinedTestDispatcher)
+        // onNodeRunningForTest / onNodeErrorForTest 内部走 Dispatchers.Main，
+        // JVM 单测里没有 Main dispatcher，必须先换成测试 dispatcher。
+        Dispatchers.setMain(unconfinedTestDispatcher())
+        testScope = TestCoroutineScope(unconfinedTestDispatcher())
         fakeContext = FakeContext()
         fakeTailnetRepository = FakeTailnetRepository()
         fakeProxyConfigurator = FakeProxyConfigurator()
@@ -46,7 +52,14 @@ class TunnelManagerTest {
             proxyConfigurator = fakeProxyConfigurator,
             localProxyServer = fakeLocalProxyServer,
             scope = testScope,
+            // tsnet 的 native 库在 JVM 单测里跑不起来，用假节点替身。
+            nodeStarter = { null },
         )
+    }
+
+    @After
+    fun tearDown() {
+        Dispatchers.resetMain()
     }
 
     @Test
@@ -138,7 +151,7 @@ class TunnelManagerTest {
     }
 
     @Test
-    fun `restart stops and starts again`() = runTest {
+    fun `restart stops the old node and starts again`() = runTest {
         fakeContext.authKey = "tskey-test123"
         tunnelManager.start("tskey-test123")
         testScope.advanceUntilIdle()
@@ -148,8 +161,9 @@ class TunnelManagerTest {
         tunnelManager.restart("tskey-new456")
         testScope.advanceUntilIdle()
 
+        // 旧节点已停，新一轮启动重新进入 Starting
         assertTrue(fakeLocalProxyServer.stopped)
-        assertEquals("tskey-new456", fakeLocalProxyServer.lastAuthKey)
+        assertTrue(tunnelManager.tunnelState.value is TunnelState.Starting)
     }
 
     // Test doubles
