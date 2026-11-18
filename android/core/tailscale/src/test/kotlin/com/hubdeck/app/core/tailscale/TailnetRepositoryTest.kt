@@ -3,8 +3,7 @@ package com.hubdeck.app.core.tailscale
 import com.hubdeck.app.core.model.TailnetDevice
 import com.hubdeck.app.core.model.TailnetSource
 import com.hubdeck.app.core.model.TailnetState
-import com.hubdeck.app.core.security.CredentialStore
-import com.hubdeck.app.core.security.SecretProvider
+import com.hubdeck.app.core.security.CredentialPort
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -109,7 +108,7 @@ class TailnetRepositoryTest {
         repo.storeLocalApiSecret("my-secret")
 
         assertEquals("my-secret", fakeCredentials.savedLocalApiSecret)
-        assertEquals(CredentialStore.KIND_LOCAL_API_SECRET, fakeCredentials.lastSavedKind)
+        assertEquals(CredentialPort.KIND_LOCAL_API_SECRET, fakeCredentials.lastSavedKind)
         assertEquals("tailscale", fakeCredentials.lastSavedLabel)
     }
 
@@ -118,7 +117,7 @@ class TailnetRepositoryTest {
         repo.storeControlPlaneToken("my-token")
 
         assertEquals("my-token", fakeCredentials.savedControlPlaneToken)
-        assertEquals(CredentialStore.KIND_CONTROL_TOKEN, fakeCredentials.lastSavedKind)
+        assertEquals(CredentialPort.KIND_CONTROL_TOKEN, fakeCredentials.lastSavedKind)
         assertEquals("control-plane", fakeCredentials.lastSavedLabel)
     }
 
@@ -169,7 +168,7 @@ class TailnetRepositoryTest {
         override suspend fun devices(tailnet: String): List<TailnetDevice> = devicesToReturn
     }
 
-    class FakeCredentialStore : SecretProvider {
+    class FakeCredentialStore : CredentialPort {
         var localApiSecretToReturn: String? = null
         var savedLocalApiSecret: String? = null
         var savedControlPlaneToken: String? = null
@@ -180,18 +179,14 @@ class TailnetRepositoryTest {
 
         override suspend fun controlPlaneToken(): String? = null
 
-        suspend fun save(label: String, kind: String, secret: String) {
+        override suspend fun save(label: String, kind: String, secret: String) {
             lastSavedLabel = label
             lastSavedKind = kind
-            if (kind == CredentialStore.KIND_LOCAL_API_SECRET) {
+            if (kind == CredentialPort.KIND_LOCAL_API_SECRET) {
                 savedLocalApiSecret = secret
-            } else if (kind == CredentialStore.KIND_CONTROL_TOKEN) {
+            } else if (kind == CredentialPort.KIND_CONTROL_TOKEN) {
                 savedControlPlaneToken = secret
             }
         }
-
-        override suspend fun delete(id: String) = Unit
-        override suspend fun list(): List<com.hubdeck.app.core.data.db.CredentialEntity> = emptyList()
-        override fun encodeForExport(value: ByteArray): String = ""
     }
 }

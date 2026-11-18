@@ -3,7 +3,7 @@ package com.hubdeck.app.core.tailscale
 import com.hubdeck.app.core.model.TailnetDevice
 import com.hubdeck.app.core.model.TailnetSource
 import com.hubdeck.app.core.model.TailnetState
-import com.hubdeck.app.core.security.CredentialStore
+import com.hubdeck.app.core.security.CredentialPort
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -16,7 +16,7 @@ import javax.inject.Singleton
 class TailnetRepository @Inject constructor(
     private val localApi: TailscaleLocalApiClient,
     private val controlApi: TailscaleControlApiClient,
-    private val credentials: CredentialStore,
+    private val credentials: CredentialPort,
 ) {
 
     /** Reads the Local API; returns an "unknown" state when the secret is missing or unavailable. */
@@ -27,10 +27,10 @@ class TailnetRepository @Inject constructor(
     suspend fun devices(tailnet: String): List<TailnetDevice> = controlApi.devices(tailnet)
 
     suspend fun storeLocalApiSecret(secret: String) =
-        credentials.save("tailscale", CredentialStore.KIND_LOCAL_API_SECRET, secret)
+        credentials.save("tailscale", CredentialPort.KIND_LOCAL_API_SECRET, secret)
 
     suspend fun storeControlPlaneToken(token: String) =
-        credentials.save("control-plane", CredentialStore.KIND_CONTROL_TOKEN, token)
+        credentials.save("control-plane", CredentialPort.KIND_CONTROL_TOKEN, token)
 
     suspend fun hasLocalApiSecret(): Boolean = !credentials.localApiSecret().isNullOrBlank()
 }

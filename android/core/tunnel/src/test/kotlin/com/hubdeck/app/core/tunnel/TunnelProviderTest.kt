@@ -1,4 +1,4 @@
-package com.hubdeck.app
+package com.hubdeck.app.core.tunnel
 
 import android.content.Context
 import android.content.SharedPreferences
@@ -17,9 +17,10 @@ import org.mockito.Mockito.mock
  * 核心验收项：
  * - getAuthKey 返回 SharedPreferences 中保存的 key
  * - getAuthKey 忽略 placeholder 和 skipped 值
- * - getAuthKey 回退到环境变量
  * - initTunnel 正确标记初始化状态
  * - saveAuthKey/clearAuthKey 正确读写
+ *
+ * 放在 :core:tunnel —— TunnelProvider 随模块拆分已经搬到这里（:app 里那份是遗留副本）。
  */
 class TunnelProviderTest {
 
@@ -76,13 +77,6 @@ class TunnelProviderTest {
     }
 
     @Test
-    fun `getAuthKey falls back to environment variable`() {
-        Mockito.when(mockPrefs.getString("tailscale_auth_key_saved", null)).thenReturn(null)
-        // Note: We can't easily mock System.getenv, so this test documents expected behavior
-        // In real usage, if env var HUB_TAILSCALE_AUTHKEY is set, it will be used
-    }
-
-    @Test
     fun `initTunnel returns auth key when available`() {
         Mockito.when(mockPrefs.getString("tailscale_auth_key_saved", null)).thenReturn("tskey-test")
 
@@ -106,15 +100,15 @@ class TunnelProviderTest {
     fun `saveAuthKey writes to SharedPreferences`() {
         TunnelProvider.saveAuthKey(mockContext, "tskey-new")
 
-        // Verify editor.putString was called with correct key
-        // (Mockito verification would go here in a real test with mockito-kotlin)
+        Mockito.verify(mockEditor).putString("tailscale_auth_key_saved", "tskey-new")
+        Mockito.verify(mockEditor).apply()
     }
 
     @Test
     fun `clearAuthKey removes from SharedPreferences`() {
         TunnelProvider.clearAuthKey(mockContext)
 
-        // Verify editor.remove was called
+        Mockito.verify(mockEditor).remove("tailscale_auth_key_saved")
     }
 
     @Test

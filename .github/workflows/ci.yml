@@ -86,6 +86,9 @@ jobs:
 
       - name: 校验单测真的执行了（防 NO-SOURCE 假绿）
         working-directory: .
+        env:
+          # 每个带单测的模块都必须产出结果，防止“绿灯但没跑”
+          HUBDECK_REQUIRED_TEST_MODULES: "core/data core/network core/tailscale core/tunnel"
         run: bash scripts/ci-verify-tests.sh
 
       - name: 上传 debug APK

@@ -1,4 +1,4 @@
-package com.hubdeck.app
+package com.hubdeck.app.core.tunnel
 
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -12,6 +12,8 @@ import org.junit.Test
  * - isTailnetHost 正确识别 *.ts.net 域名
  * - isTailnetHost 拒绝公网 IP/域名
  * - isTailnetIp 正确解析 IPv4 尾网地址
+ *
+ * 放在 :core:tunnel —— LocalProxyServer 随模块拆分已经搬到这里（:app 里那份是遗留副本）。
  */
 class LocalProxyServerTest {
 
@@ -27,12 +29,12 @@ class LocalProxyServerTest {
     @Test
     fun `tailnet IP outside range is not recognized`() {
         assertFalse(proxyServer.isTailnetHost("100.63.255.255")) // Just below
-        assertFalse(proxyServer.isTailnetHost("100.128.0.0"))   // Just above
-        assertFalse(proxyServer.isTailnetHost("192.168.1.1"))   // Private LAN
-        assertFalse(proxyServer.isTailnetHost("10.0.0.1"))      // Private LAN
-        assertFalse(proxyServer.isTailnetHost("172.16.0.1"))    // Private LAN
-        assertFalse(proxyServer.isTailnetHost("8.8.8.8"))       // Public DNS
-        assertFalse(proxyServer.isTailnetHost("1.1.1.1"))       // Public DNS
+        assertFalse(proxyServer.isTailnetHost("100.128.0.0")) // Just above
+        assertFalse(proxyServer.isTailnetHost("192.168.1.1")) // Private LAN
+        assertFalse(proxyServer.isTailnetHost("10.0.0.1")) // Private LAN
+        assertFalse(proxyServer.isTailnetHost("172.16.0.1")) // Private LAN
+        assertFalse(proxyServer.isTailnetHost("8.8.8.8")) // Public DNS
+        assertFalse(proxyServer.isTailnetHost("1.1.1.1")) // Public DNS
     }
 
     @Test

@@ -1,37 +1,41 @@
-package com.hubdeck.app
+package com.hubdeck.app.core.tunnel
 
-import com.hubdeck.app.core.model.TailnetSource
+import android.content.Context
+import android.content.SharedPreferences
 import com.hubdeck.app.core.model.TailnetState
+import com.hubdeck.app.core.security.CredentialPort
 import com.hubdeck.app.core.tailscale.TailnetRepository
-import com.hubdeck.app.core.tailscale.TailscaleLocalApiClient
 import com.hubdeck.app.core.tailscale.TailscaleControlApiClient
-import com.hubdeck.app.core.tunnel.LocalProxyServer
-import com.hubdeck.app.core.tunnel.ProxyConfigurator
-import com.hubdeck.app.core.tunnel.TunnelManager
-import com.hubdeck.app.core.tunnel.TunnelState
+import com.hubdeck.app.core.tailscale.TailscaleLocalApiClient
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.test.TestCoroutineScope
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
-import kotlinx.coroutines.test.unconfinedTestDispatcher
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
-import org.junit.Assert.assertNotNull
-import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
+import org.mockito.Mockito.mock
+import org.mockito.Mockito.`when`
 
-@ExperimentalCoroutinesApi
+/**
+ * TunnelManager 单测（状态机 + 代理回落）。
+ *
+ * 覆盖：初始断开、无 auth key 不启动、启动→连接、错误→回落可重试、停止清理、重启。
+ * 放在 :core:tunnel 而不是 :app —— 测试要碰 internal 的测试钩子（onNodeRunningForTest 等），
+ * internal 只在同模块可见；:app 里那份是拆模块前的遗留副本，早就编译不过了。
+ */
+@OptIn(ExperimentalCoroutinesApi::class)
 class TunnelManagerTest {
 
-    private lateinit var testScope: TestCoroutineScope
-    private lateinit var fakeContext: FakeContext
-    private lateinit var fakeTailnetRepository: FakeTailnetRepository
+    private lateinit var mockPrefs: SharedPreferences
+    private lateinit var mockContext: Context
     private lateinit var fakeProxyConfigurator: FakeProxyConfigurator
     private lateinit var fakeLocalProxyServer: FakeLocalProxyServer
     private lateinit var tunnelManager: TunnelManager
@@ -40,18 +44,21 @@ class TunnelManagerTest {
     fun setUp() {
         // onNodeRunningForTest / onNodeErrorForTest 内部走 Dispatchers.Main，
         // JVM 单测里没有 Main dispatcher，必须先换成测试 dispatcher。
-        Dispatchers.setMain(unconfinedTestDispatcher())
-        testScope = TestCoroutineScope(unconfinedTestDispatcher())
-        fakeContext = FakeContext()
-        fakeTailnetRepository = FakeTailnetRepository()
+        Dispatchers.setMain(UnconfinedTestDispatcher())
+
+        mockPrefs = mock(SharedPreferences::class.java)
+        mockContext = mock(Context::class.java)
+        `when`(mockContext.getSharedPreferences("hubdeck_prefs", Context.MODE_PRIVATE)).thenReturn(mockPrefs)
+
         fakeProxyConfigurator = FakeProxyConfigurator()
         fakeLocalProxyServer = FakeLocalProxyServer()
+
         tunnelManager = TunnelManager(
-            context = fakeContext,
-            tailnetRepository = fakeTailnetRepository,
+            context = mockContext,
+            tailnetRepository = fakeTailnetRepository(),
             proxyConfigurator = fakeProxyConfigurator,
             localProxyServer = fakeLocalProxyServer,
-            scope = testScope,
+            scope = CoroutineScope(Dispatchers.Main),
             // tsnet 的 native 库在 JVM 单测里跑不起来，用假节点替身。
             nodeStarter = { null },
         )
@@ -70,32 +77,28 @@ class TunnelManagerTest {
 
     @Test
     fun `start with no auth key stays disconnected`() = runTest {
-        // FakeContext returns null for auth key
+        // SharedPreferences 里没有存 auth key
+        `when`(mockPrefs.getString("tailscale_auth_key_saved", null)).thenReturn(null)
+
         tunnelManager.startIfConfigured()
-        testScope.advanceUntilIdle()
 
         val state = tunnelManager.tunnelState.first()
         assertTrue(state is TunnelState.Disconnected)
+        assertFalse(tunnelManager.startAttempted)
     }
 
     @Test
     fun `start with auth key transitions through starting to connected`() = runTest {
-        // Setup fake context with auth key
-        fakeContext.authKey = "tskey-test123"
-
         tunnelManager.start("tskey-test123")
-        testScope.advanceUntilIdle()
 
         // Should transition to Starting
         var state = tunnelManager.tunnelState.first()
         assertTrue(state is TunnelState.Starting)
 
         // Simulate node RUNNING by calling onNodeRunning directly (since we can't mock TailnetNode)
-        // This tests the state transition logic
         tunnelManager.onNodeRunningForTest(
             addresses = listOf("100.64.0.1", "host.tailnet-xyz.ts.net")
         )
-        testScope.advanceUntilIdle()
 
         // Should be Connected
         state = tunnelManager.tunnelState.first()
@@ -112,14 +115,10 @@ class TunnelManagerTest {
 
     @Test
     fun `onNodeError falls back to error state then allows retry`() = runTest {
-        fakeContext.authKey = "tskey-test123"
-
         tunnelManager.start("tskey-test123")
-        testScope.advanceUntilIdle()
 
         // Trigger error
         tunnelManager.onNodeErrorForTest("Test error")
-        testScope.advanceUntilIdle()
 
         var state = tunnelManager.tunnelState.first()
         assertTrue(state is TunnelState.Error)
@@ -134,15 +133,10 @@ class TunnelManagerTest {
 
     @Test
     fun `stop clears state and stops proxy`() = runTest {
-        fakeContext.authKey = "tskey-test123"
         tunnelManager.start("tskey-test123")
-        testScope.advanceUntilIdle()
-
         tunnelManager.onNodeRunningForTest(listOf("100.64.0.1"))
-        testScope.advanceUntilIdle()
 
         tunnelManager.stop()
-        testScope.advanceUntilIdle()
 
         val state = tunnelManager.tunnelState.first()
         assertTrue(state is TunnelState.Disconnected)
@@ -152,14 +146,10 @@ class TunnelManagerTest {
 
     @Test
     fun `restart stops the old node and starts again`() = runTest {
-        fakeContext.authKey = "tskey-test123"
         tunnelManager.start("tskey-test123")
-        testScope.advanceUntilIdle()
         tunnelManager.onNodeRunningForTest(listOf("100.64.0.1"))
-        testScope.advanceUntilIdle()
 
         tunnelManager.restart("tskey-new456")
-        testScope.advanceUntilIdle()
 
         // 旧节点已停，新一轮启动重新进入 Starting
         assertTrue(fakeLocalProxyServer.stopped)
@@ -168,35 +158,8 @@ class TunnelManagerTest {
 
     // Test doubles
 
-    class FakeContext : android.content.ContextWrapper(android.app.Application()) {
-        var authKey: String? = null
-        override fun getSharedPreferences(name: String, mode: Int): android.content.SharedPreferences {
-            return object : android.content.SharedPreferences {
-                override fun getString(key: String, defValue: String?): String? {
-                    if (key == "tailscale_auth_key_saved") return authKey
-                    return defValue
-                }
-                override fun edit(): Editor = object : Editor {
-                    override fun putString(key: String, value: String?): Editor = this
-                    override fun apply() = Unit
-                    override fun commit() = true
-                    override fun remove(key: String): Editor = this
-                    override fun clear(): Editor = this
-                }
-                override fun contains(key: String) = false
-                override fun getAll() = emptyMap()
-                override fun getBoolean(key: String, defValue: Boolean) = defValue
-                override fun getInt(key: String, defValue: Int) = defValue
-                override fun getLong(key: String, defValue: Long) = defValue
-                override fun getFloat(key: String, defValue: Float) = defValue
-                override fun getStringSet(key: String, defValue: Set<String>?) = defValue
-                override fun registerOnSharedPreferenceChangeListener(listener: OnSharedPreferenceChangeListener) = Unit
-                override fun unregisterOnSharedPreferenceChangeListener(listener: OnSharedPreferenceChangeListener) = Unit
-            }
-        }
-    }
-
-    class FakeTailnetRepository : TailnetRepository(
+    /** TailnetRepository 是 final 类，直接构造即可，不需要继承出假实现。 */
+    private fun fakeTailnetRepository(): TailnetRepository = TailnetRepository(
         localApi = object : TailscaleLocalApiClient {
             override suspend fun status() = null
             override suspend fun selfIp() = null
@@ -204,10 +167,11 @@ class TunnelManagerTest {
         controlApi = object : TailscaleControlApiClient {
             override suspend fun devices(tailnet: String) = emptyList()
         },
-        credentials = object : com.hubdeck.app.core.security.SecretProvider {
-            override suspend fun localApiSecret() = null
-            override suspend fun controlPlaneToken() = null
-        }
+        credentials = object : CredentialPort {
+            override suspend fun localApiSecret(): String? = null
+            override suspend fun controlPlaneToken(): String? = null
+            override suspend fun save(label: String, kind: String, secret: String) = Unit
+        },
     )
 
     class FakeProxyConfigurator : ProxyConfigurator() {
@@ -215,7 +179,7 @@ class TunnelManagerTest {
         var cleared = false
         var lastTailnetState: TailnetState? = null
 
-        override fun apply(context: android.content.Context, tailnetState: TailnetState): Boolean {
+        override fun apply(context: android.content.Context, tailnetState: com.hubdeck.app.core.model.TailnetState): Boolean {
             applied = true
             lastTailnetState = tailnetState
             return true

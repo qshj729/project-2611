@@ -14,6 +14,23 @@ import javax.crypto.SecretKey
 import javax.crypto.spec.GCMParameterSpec
 
 /**
+ * 凭据读写端口。
+ *
+ * 上层模块（:core:tailscale 等）只依赖这个接口，而不是 Android 侧的 [CredentialStore]：
+ * [CredentialStore] 依赖 Android Keystore，JVM 单测里没法实例化，
+ * 用接口才能注入假实现（见 :core:tailscale 的 TailnetRepositoryTest）。
+ */
+interface CredentialPort : SecretProvider {
+    suspend fun save(label: String, kind: String, secret: String)
+
+    companion object {
+        const val KIND_LOCAL_API_SECRET = "localapi_secret"
+        const val KIND_CONTROL_TOKEN = "oauth_token"
+        const val KIND_SERVICE_TOKEN = "api_token"
+    }
+}
+
+/**
  * Stores sensitive strings (Tailscale Local API secret, control plane token, service API
  * tokens) encrypted with an AES-256-GCM key that never leaves the Android Keystore.
  *
@@ -37,13 +54,13 @@ data class Credential(
 class CredentialStore(
     private val context: Context,
     private val credentialDao: CredentialDao,
-) : SecretProvider {
+) : CredentialPort {
 
-    override suspend fun localApiSecret(): String? = readByKind(KIND_LOCAL_API_SECRET)
+    override suspend fun localApiSecret(): String? = readByKind(CredentialPort.KIND_LOCAL_API_SECRET)
 
-    override suspend fun controlPlaneToken(): String? = readByKind(KIND_CONTROL_TOKEN)
+    override suspend fun controlPlaneToken(): String? = readByKind(CredentialPort.KIND_CONTROL_TOKEN)
 
-    suspend fun save(label: String, kind: String, secret: String) {
+    override suspend fun save(label: String, kind: String, secret: String) {
         val cipher = Cipher.getInstance(TRANSFORMATION)
         cipher.init(Cipher.ENCRYPT_MODE, key())
         val cipherText = cipher.doFinal(secret.toByteArray(Charsets.UTF_8))
@@ -94,10 +111,6 @@ class CredentialStore(
     fun encodeForExport(value: ByteArray): String = Base64.encodeToString(value, Base64.NO_WRAP)
 
     companion object {
-        const val KIND_LOCAL_API_SECRET = "localapi_secret"
-        const val KIND_CONTROL_TOKEN = "oauth_token"
-        const val KIND_SERVICE_TOKEN = "api_token"
-
         private const val ANDROID_KEYSTORE = "AndroidKeyStore"
         private const val KEY_ALIAS = "hubdeck.credentials.v1"
         private const val TRANSFORMATION = "AES/GCM/NoPadding"

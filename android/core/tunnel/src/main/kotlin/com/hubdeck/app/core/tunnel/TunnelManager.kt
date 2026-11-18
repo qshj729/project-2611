@@ -72,9 +72,9 @@ class TunnelManager(
     /** 节点健康检查协程。 */
     private var lifecycleJob: Job? = null
 
-    /** 是否已经尝试过启动（避免重复起节点）。 */
+    /** 是否已经尝试过启动（避免重复起节点）。internal：同模块 JVM 单测要断言可重试。 */
     @Volatile
-    private var startAttempted = false
+    internal var startAttempted = false
 
     /** 若已保存 auth key，则启动隧道。 */
     fun startIfConfigured() {

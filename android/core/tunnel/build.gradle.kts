@@ -37,6 +37,12 @@ android {
             keepDebugSymbols += "**/libklethron_tsnet.so"
         }
     }
+
+    testOptions {
+        // JVM 单测里 android.jar 的方法默认抛 "Stub!"；
+        // 让它们返回默认值，Log/Context 之类的调用才不会把单测打挂。
+        unitTests.isReturnDefaultValues = true
+    }
 }
 
 dependencies {
@@ -54,4 +60,7 @@ dependencies {
 
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)
+    testImplementation(libs.mockito.core)
+    // 单测要造凭据假实现（CredentialPort 在 :core:data）
+    testImplementation(project(":core:data"))
 }
