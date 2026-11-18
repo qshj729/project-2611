@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.width
@@ -58,6 +59,8 @@ import com.hubdeck.app.core.tunnel.TunnelState
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -115,10 +118,8 @@ class TailscaleViewModel @Inject constructor(
 
     fun startTunnelAuthorization() {
         viewModelScope.launch {
-            val authUrl = tunnelManager.authUrl.firstOrNull()
-            authUrl?.let { url ->
-                openInBrowser(url)
-            }
+            val authUrl = tunnelManager.authUrl.filterNotNull().first()
+            openInBrowser(authUrl)
         }
     }
 
@@ -181,7 +182,7 @@ fun TailscaleScreen(
                 Column(modifier = Modifier.padding(16.dp).fillMaxWidth()) {
                     Text("内网连接状态", style = MaterialTheme.typography.titleMedium)
 
-                    when (tunnelState) {
+                    when (val tunnel = tunnelState) {
                         is TunnelState.Connected -> {
                             Row(
                                 modifier = Modifier.padding(top = 8.dp).fillMaxWidth(),
@@ -200,9 +201,9 @@ fun TailscaleScreen(
                                 )
                             }
                             Text(
-                                "节点：${tunnelState.nodeName}\n" +
-                                    "MagicDNS 后缀：${tunnelState.magicDnsSuffix ?: "-"}\n" +
-                                    "节点 IP：${tunnelState.tailnetIps.joinToString(", ")}",
+                                "节点：${tunnel.nodeName}\n" +
+                                    "MagicDNS 后缀：${tunnel.magicDnsSuffix ?: "-"}\n" +
+                                    "节点 IP：${tunnel.tailnetIps.joinToString(", ")}",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 modifier = Modifier.padding(top = 4.dp).fillMaxWidth(),
@@ -231,7 +232,7 @@ fun TailscaleScreen(
                             }
                             Text(
                                 "请在浏览器中完成授权，授权完成后将自动连接。\n" +
-                                    "授权链接：${tunnelState.loginUrl}",
+                                    "授权链接：${tunnel.loginUrl}",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 modifier = Modifier.padding(top = 4.dp).fillMaxWidth(),
@@ -277,7 +278,7 @@ fun TailscaleScreen(
                                 )
                             }
                             Text(
-                                "原因：${tunnelState.reason}",
+                                "原因：${tunnel.reason}",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.error,
                                 modifier = Modifier.padding(top = 4.dp).fillMaxWidth(),
