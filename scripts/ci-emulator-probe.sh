@@ -40,6 +40,8 @@ ACTIVITY="${HUB_DECK_ACTIVITY:-com.hubdeck.app.MainActivity}"
 SETTLE_WAIT="${SETTLE_WAIT:-300}"   # 等系统安定（开机后 SystemUI 还在忙）
 FOCUS_WAIT="${FOCUS_WAIT:-300}"     # 等我们的窗口拿到焦点
 RENDER_WAIT="${RENDER_WAIT:-20}"    # 拿到焦点后再等渲染
+INSTALL_RETRY="${INSTALL_RETRY:-3}" # 安装重试次数（package 服务未就绪时会失败）
+INSTALL_RETRY_WAIT="${INSTALL_RETRY_WAIT:-10}" # 安装失败后的重试间隔
 
 mkdir -p "$EVIDENCE_DIR"
 SUMMARY="$EVIDENCE_DIR/summary.txt"
@@ -71,6 +73,31 @@ current_focus() {
     | grep -E "mCurrentFocus" | tr -d '\r' | head -1
 }
 
+# 焦点判定：mCurrentFocus=null 是「窗口系统还没起来」，不是「已经有焦点」。
+# 2026-11-18 run 44270374570 实测：系统服务（settings / overlay / activity / package）
+# 全都还没注册时，dumpsys 仍然会输出 "mCurrentFocus=null"，
+# 旧逻辑只判字符串非空 → 误判成「系统已安定」→ 紧接着 install 失败
+# （Can't find service: package），脚本还继续往下跑，白等 5 分钟才报红。
+focus_ready() {
+  local focus="$1"
+  [ -n "$focus" ] || return 1
+  case "$focus" in
+    *mCurrentFocus=null*) return 1 ;;
+    *mCurrentFocus=null\ *|*"=null"*) return 1 ;;
+  esac
+  return 0
+}
+
+# package 服务（PackageManager）是否已注册。没注册就装不了 APK。
+package_service_ready() {
+  local out
+  out="$(adb shell service check package 2>/dev/null | tr -d '\r' | head -1)"
+  case "$out" in
+    *"package: found"*|*"package: ok"*) return 0 ;;
+  esac
+  return 1
+}
+
 # 1) 等系统安定：开机后那几分钟 SystemUI 自己都在 ANR，等它不再弹错窗再动我们的应用
 settle_system() {
   local deadline=$(( $(date +%s) + SETTLE_WAIT ))
@@ -78,14 +105,18 @@ settle_system() {
     local focus
     focus="$(current_focus)"
     printf '%s\n' "$focus" >"$EVIDENCE_DIR/focus-boot.txt"
-    if [ -n "$focus" ]; then
+    if focus_ready "$focus"; then
       if printf '%s' "$focus" | grep -qi "not responding"; then
         log "系统还在弹 ANR，先按掉：$focus"
         dismiss_dialogs
-      else
-        log "系统已安定：$focus"
+      elif package_service_ready; then
+        log "系统已安定：$focus（package 服务已就绪）"
         return 0
+      else
+        log "窗口已有焦点，但 package 服务还没起来，等一等"
       fi
+    else
+      log "窗口系统还没就绪（$focus），等一等"
     fi
     sleep 5
   done
@@ -93,9 +124,32 @@ settle_system() {
   return 1
 }
 
-# 2) 安装
-log "安装 APK"
-adb install -r -t "$APK_PATH" 2>&1 | tee "$EVIDENCE_DIR/install.log"
+# 2) 安装：装不上就直接判红，不再空跑后面的启动 / 截图
+install_apk() {
+  local attempt=1
+  while [ "$attempt" -le "$INSTALL_RETRY" ]; do
+    log "安装 APK（第 $attempt/$INSTALL_RETRY 次）"
+    if adb install -r -t "$APK_PATH" >"$EVIDENCE_DIR/install.log" 2>&1; then
+      cat "$EVIDENCE_DIR/install.log"
+      if adb shell pm path "$PACKAGE" 2>/dev/null | grep -q "package:"; then
+        log "安装成功，$PACKAGE 已在设备上"
+        return 0
+      fi
+      log "install 返回 0，但 pm path 查不到 $PACKAGE，按失败处理"
+    else
+      cat "$EVIDENCE_DIR/install.log"
+      log "安装失败（多数是 package 服务还没就绪），10 秒后重试"
+    fi
+    sleep "$INSTALL_RETRY_WAIT"
+    attempt=$(( attempt + 1 ))
+  done
+  echo "❌ APK 安装失败：$APK_PATH" | tee -a "$SUMMARY"
+  echo "--- install.log ---" | tee -a "$SUMMARY"
+  cat "$EVIDENCE_DIR/install.log" 2>/dev/null | tee -a "$SUMMARY"
+  echo "结论: ❌ 通道 E 取证无效——APK 没装上，截图 / UI 树 / logcat 全部无意义" | tee -a "$SUMMARY"
+  ls -la "$EVIDENCE_DIR" | tee -a "$SUMMARY"
+  return 1
+}
 
 launch_app() {
   log "清空 logcat 并启动 $PACKAGE/$ACTIVITY"
@@ -161,9 +215,13 @@ collect_evidence() {
     >"$EVIDENCE_DIR/logcat-app.txt" || true
 }
 
-# 3) 等系统安定 → 启动 + 轮询焦点（失败则重启一次再试）
+# 3) 等系统安定 → 装 APK（装不上直接判红）→ 启动 + 轮询焦点（失败则重启一次再试）
 log "等系统安定（最多 ${SETTLE_WAIT}s）"
 settle_system || true
+
+if ! install_apk; then
+  exit 1
+fi
 
 attempt=1
 focus_ok=0

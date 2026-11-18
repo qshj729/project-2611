@@ -77,6 +77,12 @@ jobs:
             exit 1
           fi
 
+      - name: 自检：通道 E 取证脚本的判定逻辑（不需要模拟器）
+        # 假 adb 复现几种坏情况（package 服务未就绪 / install 失败 / 拿不到焦点），
+        # 断言取证脚本「该红就红、该停就停」。纯 bash，~40 秒。
+        working-directory: .
+        run: bash scripts/ci-emulator-probe.selftest.sh
+
       - name: 构建 + 单测 + Lint
         # testDebugUnitTest 用聚合写法：会跑所有模块的单测任务。
         # 不要再写成 :app:testDebugUnitTest —— 测试已搬到模块内，那个任务是 NO-SOURCE，
