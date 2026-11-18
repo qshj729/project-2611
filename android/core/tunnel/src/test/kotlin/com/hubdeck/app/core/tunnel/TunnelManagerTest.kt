@@ -2,6 +2,7 @@ package com.hubdeck.app.core.tunnel
 
 import android.content.Context
 import android.content.SharedPreferences
+import com.hubdeck.app.core.model.TailnetDevice
 import com.hubdeck.app.core.model.TailnetState
 import com.hubdeck.app.core.security.CredentialPort
 import com.hubdeck.app.core.tailscale.TailnetRepository
@@ -165,7 +166,7 @@ class TunnelManagerTest {
             override suspend fun selfIp() = null
         },
         controlApi = object : TailscaleControlApiClient {
-            override suspend fun devices(tailnet: String) = emptyList()
+            override suspend fun devices(tailnet: String): List<TailnetDevice> = emptyList()
         },
         credentials = object : CredentialPort {
             override suspend fun localApiSecret(): String? = null

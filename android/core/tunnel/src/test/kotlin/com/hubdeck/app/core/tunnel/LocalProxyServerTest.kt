@@ -20,7 +20,7 @@ class LocalProxyServerTest {
     private val proxyServer = LocalProxyServer()
 
     @Test
-    fun `tailnet IP in 100.64.0.0/10 is recognized`() {
+    fun `tailnet IP inside the 100x64x0x0 slash 10 range is recognized`() {
         assertTrue(proxyServer.isTailnetHost("100.64.0.1"))
         assertTrue(proxyServer.isTailnetHost("100.127.255.254"))
         assertTrue(proxyServer.isTailnetHost("100.96.1.1")) // Middle of range
@@ -38,7 +38,7 @@ class LocalProxyServerTest {
     }
 
     @Test
-    fun `magic dns ts.net domains are recognized`() {
+    fun `magic dns ts dot net domains are recognized`() {
         assertTrue(proxyServer.isTailnetHost("host.tailnet-xyz.ts.net"))
         assertTrue(proxyServer.isTailnetHost("nas.ts.net"))
         assertTrue(proxyServer.isTailnetHost("service.my-tailnet.ts.net"))
