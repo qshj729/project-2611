@@ -100,7 +100,7 @@ class ServiceProbeTest {
         )
         assertFalse(result.reachable)
         // Could be "连接超时" or "连接失败" depending on platform
-        assertTrue { result.reason == "连接超时" || result.reason == "连接失败" }
+        assertTrue(result.reason == "连接超时" || result.reason == "连接失败")
     }
 
     @Test
@@ -114,7 +114,7 @@ class ServiceProbeTest {
         )
         assertFalse(result.reachable)
         // On some systems this may be "连接失败" or "连接被拒绝"
-        assertTrue { result.reason.contains("拒绝") || result.reason == "连接失败" || result.reason.contains("refused".uppercase()) }
+        assertTrue(result.reason?.contains("拒绝") == true || result.reason == "连接失败" || result.reason?.contains("REFUSED") == true)
     }
 
     @Test
@@ -127,7 +127,7 @@ class ServiceProbeTest {
             timeoutMs = 2000,
         )
         assertTrue(result.reachable)
-        assertTrue { result.latencyMs != null && result.latencyMs! >= 0 }
+        assertTrue(result.latencyMs != null && result.latencyMs!! >= 0)
         assertNull(result.reason)
     }
 
@@ -142,7 +142,7 @@ class ServiceProbeTest {
         )
         assertTrue(result.reachable)
         assertEquals("需要登录", result.reason)
-        assertTrue { result.latencyMs != null && result.latencyMs! >= 0 }
+        assertTrue(result.latencyMs != null && result.latencyMs!! >= 0)
     }
 
     @Test
@@ -221,6 +221,6 @@ class ServiceProbeTest {
         )
         assertTrue(result.reachable)
         val request = server.takeRequest()
-        assertEquals("https", request.url.scheme())
+        assertEquals("https", request?.requestUrl?.scheme())
     }
 }

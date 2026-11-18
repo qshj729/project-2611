@@ -121,15 +121,15 @@ class TailscaleLocalApiClientTest {
         server.enqueue(MockResponse().setBody("""{"BackendState":"Running"}"""))
         client(secret = "s3cret").status()
         val request = server.takeRequest()
-        assertEquals("/api/v2/status", request.path)
-        assertEquals("Bearer s3cret", request.getHeader("Authorization"))
+        assertEquals("/api/v2/status", request?.path)
+        assertEquals("Bearer s3cret", request?.getHeader("Authorization"))
     }
 
     @Test
     fun `the self ip is trimmed`() = runTest {
         server.enqueue(MockResponse().setBody("100.101.102.103\n"))
         assertEquals("100.101.102.103", client(secret = "s3cret").selfIp())
-        assertEquals("/api/v2/ip", server.takeRequest().path)
+        assertEquals("/api/v2/ip", server.takeRequest()?.path)
     }
 
     @Test

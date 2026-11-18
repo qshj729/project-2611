@@ -52,7 +52,7 @@ class TunnelManagerTest {
     @Test
     fun `initial state is disconnected`() = runTest {
         val state = tunnelManager.tunnelState.first()
-        assertTrue { state is TunnelState.Disconnected }
+        assertTrue(state is TunnelState.Disconnected)
     }
 
     @Test
@@ -62,7 +62,7 @@ class TunnelManagerTest {
         testScope.advanceUntilIdle()
 
         val state = tunnelManager.tunnelState.first()
-        assertTrue { state is TunnelState.Disconnected }
+        assertTrue(state is TunnelState.Disconnected)
     }
 
     @Test
@@ -75,7 +75,7 @@ class TunnelManagerTest {
 
         // Should transition to Starting
         var state = tunnelManager.tunnelState.first()
-        assertTrue { state is TunnelState.Starting }
+        assertTrue(state is TunnelState.Starting)
 
         // Simulate node RUNNING by calling onNodeRunning directly (since we can't mock TailnetNode)
         // This tests the state transition logic
@@ -86,7 +86,7 @@ class TunnelManagerTest {
 
         // Should be Connected
         state = tunnelManager.tunnelState.first()
-        assertTrue { state is TunnelState.Connected }
+        assertTrue(state is TunnelState.Connected)
         val connected = state as TunnelState.Connected
         assertEquals("100.64.0.1", connected.nodeName)
         assertEquals(listOf("100.64.0.1"), connected.tailnetIps)
@@ -109,7 +109,7 @@ class TunnelManagerTest {
         testScope.advanceUntilIdle()
 
         var state = tunnelManager.tunnelState.first()
-        assertTrue { state is TunnelState.Error }
+        assertTrue(state is TunnelState.Error)
         val error = state as TunnelState.Error
         assertEquals("Test error", error.reason)
 
@@ -132,7 +132,7 @@ class TunnelManagerTest {
         testScope.advanceUntilIdle()
 
         val state = tunnelManager.tunnelState.first()
-        assertTrue { state is TunnelState.Disconnected }
+        assertTrue(state is TunnelState.Disconnected)
         assertTrue(fakeProxyConfigurator.cleared)
         assertTrue(fakeLocalProxyServer.stopped)
     }
