@@ -45,9 +45,7 @@ class TunnelManager(
      * 节点启动器：生产环境用 tsnet 的 `TailnetNode.start`；
      * 单测注入假实现（JVM 单测跑不了 tsnet 的 native 库），返回 null 表示「不接真实节点」。
      */
-    private val nodeStarter: (String) -> TailnetNode? = { authKey ->
-        TailnetNode.start(context, createStateStore(), authKey)
-    },
+    private val nodeStarter: ((String) -> TailnetNode?)? = null,
 ) : TunnelStateProvider {
 
     private val TAG = "TunnelManager"
@@ -109,7 +107,7 @@ class TunnelManager(
         scope.launch(Dispatchers.IO) {
             try {
                 // tsnet 0.14.0：节点由静态工厂创建，状态存储由 StateStore 提供。
-                val node = nodeStarter(authKey)
+                val node = startNode(authKey)
                 tailnetNode = node
                 if (node == null) {
                     // 单测替身：没有真实节点，只驱动状态机。
@@ -312,6 +310,11 @@ class TunnelManager(
 
     /** tsnet 0.14.0 需要一个 StateStore 持久化节点状态，这里用文件实现。 */
     private fun createStateStore(): StateStore = FileStateStore(File(context.filesDir, "tsnet-state"))
+
+    /** 启动真实节点；单测可以用 nodeStarter 替身顶掉（native 库在 JVM 里不可用）。 */
+    private fun startNode(authKey: String): TailnetNode? =
+        if (nodeStarter != null) nodeStarter.invoke(authKey)
+        else TailnetNode.start(context, createStateStore(), authKey)
 
     /** 测试辅助：直接模拟节点已连接。 */
     internal fun onNodeRunningForTest(addresses: List<String>) {
