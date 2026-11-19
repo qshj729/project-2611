@@ -137,7 +137,7 @@ fun DashboardContent(
         },
         topBar = {
             TopAppBar(
-                title = { Text(text = "HubDeck", style = MaterialTheme.typography.titleLarge) },
+                title = { Text(text = "MyApps", style = MaterialTheme.typography.titleLarge) },
                 actions = {
                     TailnetStatusAction(
                         uiState = uiState,

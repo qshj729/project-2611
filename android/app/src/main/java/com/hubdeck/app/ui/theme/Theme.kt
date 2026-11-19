@@ -37,7 +37,7 @@ private val DarkColors = darkColorScheme(
 )
 
 @Composable
-fun HubDeckTheme(
+fun MyAppsTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
     dynamicColor: Boolean = true,
     content: @Composable () -> Unit,
@@ -72,13 +72,13 @@ fun HubDeckTheme(
 
     MaterialTheme(
         colorScheme = colorScheme,
-        typography = HubDeckTypography,
+        typography = MyAppsTypography,
         content = content,
     )
 }
 
-/** HubDeck 字体排版系统（支持动态字体缩放）。 */
-val HubDeckTypography = androidx.compose.material3.Typography(
+/** MyApps 字体排版系统（支持动态字体缩放）。 */
+val MyAppsTypography = androidx.compose.material3.Typography(
     displayLarge = androidx.compose.ui.text.TextStyle(
         fontFamily = androidx.compose.ui.text.font.FontFamily.Default,
         fontWeight = androidx.compose.ui.text.font.FontWeight.Normal,

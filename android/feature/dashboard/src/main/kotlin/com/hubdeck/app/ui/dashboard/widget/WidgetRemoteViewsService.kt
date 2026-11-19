@@ -119,7 +119,7 @@ class WidgetRemoteViewsFactory(
 
     override fun getViewAt(position: Int): RemoteViews? {
         val item = items.getOrNull(position) ?: return null
-        val views = RemoteViews(context.packageName, com.hubdeck.feature.dashboard.R.layout.widget_hubdeck_item)
+        val views = RemoteViews(context.packageName, com.hubdeck.feature.dashboard.R.layout.widget_myapps_item)
         views.setTextViewText(com.hubdeck.feature.dashboard.R.id.widget_item_name, item.name)
         views.setTextViewText(com.hubdeck.feature.dashboard.R.id.widget_item_scope, item.scopeLabel)
         views.setOnClickPendingIntent(

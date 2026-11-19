@@ -14,7 +14,7 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "HubDeck"
+rootProject.name = "MyApps"
 
 // 装配壳：Application / MainActivity / 导航 / DI 装配（docs/design.md §7.2）
 include(":app")
