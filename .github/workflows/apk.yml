@@ -65,6 +65,8 @@ jobs:
 
       - name: 校验 APK 签名指纹
         working-directory: android
+        env:
+          PATH: /usr/local/lib/android/sdk/build-tools/35.0.0:${{ env.PATH }}
         run: |
           apk_path=app/build/outputs/apk/debug/app-debug.apk
           echo "=== APK 签名指纹 ==="
