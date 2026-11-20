@@ -8,11 +8,13 @@
 
 ## 文档索引
 
+> 设计与规范文档已迁出仓库，统一存放在项目文档区 `/home/jack/project-2611-docs/docs/`（见 `AGENTS.md` §5）。
+
 | 文档 | 内容 |
 | --- | --- |
-| [`docs/design.md`](docs/design.md) | **主设计文档**：问题与目标、竞品选型、功能清单、技术架构、数据模型、导入导出格式、安全模型、风险登记册 |
-| [`docs/tailscale-integration.md`](docs/tailscale-integration.md) | **Tailscale 集成深潜**：能力盘点、五种接入方式对比、7 条 ADR、Android 平台限制与规避、真机验证清单 |
-| [`docs/roadmap.md`](docs/roadmap.md) | **路线图**：M0–M5 里程碑与验收标准、任务拆分建议、KPI、风险执行表、待 CEO 拍板的决策项 |
+| [`design.md`](/home/jack/project-2611-docs/docs/design.md) | **主设计文档**：问题与目标、竞品选型、功能清单、技术架构、数据模型、导入导出格式、安全模型、风险登记册 |
+| [`tailscale-integration.md`](/home/jack/project-2611-docs/docs/tailscale-integration.md) | **Tailscale 集成深潜**：能力盘点、五种接入方式对比、7 条 ADR、Android 平台限制与规避、真机验证清单 |
+| [`roadmap.md`](/home/jack/project-2611-docs/docs/roadmap.md) | **路线图**：M0–M5 里程碑与验收标准、任务拆分建议、KPI、风险执行表、待 CEO 拍板的决策项 |
 | [`android/`](android/) | **代码脚手架**：Gradle + Kotlin + Jetpack Compose 工程，含数据层、Tailscale 客户端、探测器、端点解析等核心实现 |
 
 ---
@@ -41,7 +43,7 @@
 | 7 | 内嵌 tsnet 延后到 M5 且做可选构建变体 | Go 运行时包体、userspace 栈性能、供应链与官方 App 互斥，收益不匹配 |
 | 8 | 数据文件化（YAML） | 可进 Git、可分享、可从 Homarr 导入，配置不锁死在任何一家 |
 
-详见 [`docs/tailscale-integration.md`](docs/tailscale-integration.md) 的 ADR-001 ~ ADR-007。
+详见 [`tailscale-integration.md`](/home/jack/project-2611-docs/docs/tailscale-integration.md) 的 ADR-001 ~ ADR-007。
 
 ---
 
@@ -68,5 +70,5 @@
 ## 下一步
 
 1. 在具备 JDK 17 + Android SDK 的机器上完成首次构建，修正编译问题（roadmap M1 任务 1.1）。
-2. 按 [`docs/roadmap.md`](docs/roadmap.md) 的 M1 验收标准推进：目录 CRUD → 多地址打开 → 导入导出 → 搜索/分类 → Widget。
-3. 带着真实 tailnet 走一遍 [`docs/tailscale-integration.md`](docs/tailscale-integration.md) §7 的 V1–V7 验证清单。
+2. 按 [`roadmap.md`](/home/jack/project-2611-docs/docs/roadmap.md) 的 M1 验收标准推进：目录 CRUD → 多地址打开 → 导入导出 → 搜索/分类 → Widget。
+3. 带着真实 tailnet 走一遍 [`tailscale-integration.md`](/home/jack/project-2611-docs/docs/tailscale-integration.md) §7 的 V1–V7 验证清单。

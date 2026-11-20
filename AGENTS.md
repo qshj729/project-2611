@@ -58,10 +58,10 @@
 - **不写「本地跑过了」当交付证据**——交付证据只认 Actions artifact；本地结果只能用来自查
 
 ### 绿色构建会骗人
-目标模块 `compileDebugKotlin` 必须有命中行（`NO-SOURCE` 也是绿的），按 `docs/incidents/2026-11-10-m1-hard-kill.md` §6 的 G1–G9 逐条给结论。
+目标模块 `compileDebugKotlin` 必须有命中行（`NO-SOURCE` 也是绿的），按 `/home/jack/project-2611-docs/docs/incidents/2026-11-10-m1-hard-kill.md` §6 的 G1–G9 逐条给结论。
 
 ### 口径全文
-见 `docs/ci-only-policy.md`；设备通道见 `docs/device-test-channel.md` §4E。
+见 `/home/jack/project-2611-docs/docs/ci-only-policy.md`；设备通道见 `/home/jack/project-2611-docs/docs/device-test-channel.md` §4E。
 
 ---
 
@@ -69,23 +69,31 @@
 
 1. **完成定义**：按各角色专属定义执行
 2. **证据要求**：每项变更/验收配对应 Actions run 链接 + artifact 名 + 结论行
-3. **交接契约**：接口或实体语义要变，先在任务下留言给相关 owner 升 `docs/contracts.md` 版本，再动手
+3. **交接契约**：接口或实体语义要变，先在任务下留言给相关 owner 升 `/home/jack/project-2611-docs/docs/contracts.md` 版本，再动手
 4. **禁做清单**：不在代码、测试夹具或文档里写真实凭据；不擅自改动已公示的实体字段语义；不本地打 APK、不下载 JDK / SDK / system image、不起本地模拟器；不把任务个人工作文件（任务清单 / todos / 草稿 / 抓取日志等）写进代码仓库——这类资料统一落到项目文档区 `/home/jack/project-2611-docs`，不要 `git add` 进代码副本（参考 `todos.md` 误留仓库的先例，属 CMP-52 非本分支内容）；并在 `.gitignore` 加对应忽略项（如 `.paperclip/`、`logs.zip`）兜底，防止误入库
 5. **阻塞与升级**：真阻塞用 `blockedByIssueIds` 或带 owner 的 `unblockDescriptor`，并写清下一步；需要跨角色配合时留言给对应 owner
 6. **沟通**：见第 1 节
 
 ---
 
-## 5. 共同参考文档
+## 5. 共同参考文档（统一存放在项目文档区，不进代码仓库）
 
-- `docs/design.md` — 设计系统、领域模型、仓储契约、无障碍规范
-- `docs/contracts.md` — 接口契约版本
-- `docs/roadmap.md` — 里程碑与验收标准
-- `docs/ci-only-policy.md` — 构建与验收口径
-- `docs/acceptance-template.md` — 验收模板
-- `docs/device-test-channel.md` — 设备通道手册
-- `docs/incidents/` — 事故复盘记录
-- `/home/jack/project-2611-docs/` — 项目级文档区（任务清单 / 草稿 / 跨分支资料；不进代码仓库，见 §4.4 禁做清单）
+所有设计 / 契约 / 路线图 / 验收 / 设备通道 / 事故复盘文档已迁出仓库，统一存放在：
+
+```
+/home/jack/project-2611-docs/docs/
+```
+
+- `/home/jack/project-2611-docs/docs/design.md` — 设计系统、领域模型、仓储契约、无障碍规范
+- `/home/jack/project-2611-docs/docs/contracts.md` — 接口契约版本
+- `/home/jack/project-2611-docs/docs/roadmap.md` — 里程碑与验收标准
+- `/home/jack/project-2611-docs/docs/ci-only-policy.md` — 构建与验收口径
+- `/home/jack/project-2611-docs/docs/acceptance-template.md` — 验收模板
+- `/home/jack/project-2611-docs/docs/device-test-channel.md` — 设备通道手册
+- `/home/jack/project-2611-docs/docs/incidents/` — 事故复盘记录
+- `/home/jack/project-2611-docs/` 根目录 — 任务级资料（PR 草稿、任务清单、抓取日志等，见 §4.4）
+
+> 说明：源码注释与 `scripts/`、`.github/workflows/` 中出现的 `docs/X.md §N` 均指向上方项目文档区的同名文件，仓库内不再保留 `docs/` 目录。
 
 ---
 
