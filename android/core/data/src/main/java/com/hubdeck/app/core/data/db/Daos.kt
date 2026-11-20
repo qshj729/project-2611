@@ -83,6 +83,15 @@ interface TagDao {
     @Query("SELECT * FROM tags")
     suspend fun all(): List<TagEntity>
 
+    @Query("SELECT * FROM tags")
+    fun allFlow(): Flow<List<TagEntity>>
+
+    @Query("SELECT * FROM service_tags")
+    fun allLinksFlow(): Flow<List<ServiceTagEntity>>
+
+    @Query("SELECT * FROM service_tags")
+    suspend fun allLinks(): List<ServiceTagEntity>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsert(tag: TagEntity)
 
@@ -94,6 +103,9 @@ interface TagDao {
 
     @Query("SELECT * FROM service_tags WHERE serviceId = :serviceId")
     suspend fun tagsForService(serviceId: String): List<ServiceTagEntity>
+
+    @Query("DELETE FROM service_tags WHERE serviceId = :serviceId")
+    suspend fun deleteLinksForService(serviceId: String)
 
     @Query("DELETE FROM tags WHERE id = :id")
     suspend fun deleteById(id: String)

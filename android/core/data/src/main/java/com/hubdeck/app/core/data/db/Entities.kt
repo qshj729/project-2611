@@ -98,12 +98,15 @@ data class CredentialEntity(
     override fun hashCode(): Int = id.hashCode()
 }
 
-fun ServiceEntity.toDomain(endpoints: List<Endpoint> = emptyList()) = com.hubdeck.app.core.model.Service(
+fun ServiceEntity.toDomain(
+    endpoints: List<Endpoint> = emptyList(),
+    tagIds: List<String> = emptyList(),
+) = com.hubdeck.app.core.model.Service(
     id = id,
     name = name,
     kind = runCatching { ServiceKind.valueOf(kind) }.getOrDefault(ServiceKind.WEB),
     categoryId = categoryId,
-    tagIds = emptyList(),
+    tagIds = tagIds,
     iconKind = runCatching { IconKind.valueOf(iconKind) }.getOrDefault(IconKind.NONE),
     iconValue = iconValue,
     notes = notes,

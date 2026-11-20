@@ -178,6 +178,7 @@ class FakeHealthDao : HealthDao {
 
 class FakeTagDao : TagDao {
     private val state = MutableStateFlow<List<TagEntity>>(emptyList())
+    private val links = mutableListOf<ServiceTagEntity>()
 
     var observeError: Throwable? = null
 
@@ -186,6 +187,12 @@ class FakeTagDao : TagDao {
     }
 
     override suspend fun all(): List<TagEntity> = state.value
+
+    override fun allFlow(): Flow<List<TagEntity>> = state
+
+    override fun allLinksFlow(): Flow<List<ServiceTagEntity>> = flow { emit(links) }
+
+    override suspend fun allLinks(): List<ServiceTagEntity> = links
 
     override suspend fun upsert(tag: TagEntity) {
         state.value = state.value.filterNot { it.id == tag.id } + tag
@@ -196,10 +203,15 @@ class FakeTagDao : TagDao {
     }
 
     override suspend fun linkAll(links: List<ServiceTagEntity>) {
-        // No-op for tests
+        this.links.addAll(links)
     }
 
-    override suspend fun tagsForService(serviceId: String): List<ServiceTagEntity> = emptyList()
+    override suspend fun tagsForService(serviceId: String): List<ServiceTagEntity> =
+        links.filter { it.serviceId == serviceId }
+
+    override suspend fun deleteLinksForService(serviceId: String) {
+        links.removeAll { it.serviceId == serviceId }
+    }
 
     override suspend fun deleteById(id: String) {
         state.value = state.value.filterNot { it.id == id }

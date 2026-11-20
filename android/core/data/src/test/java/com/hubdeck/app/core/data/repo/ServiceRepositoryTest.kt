@@ -4,6 +4,8 @@ import com.hubdeck.app.core.data.db.CategoryEntity
 import com.hubdeck.app.core.data.db.EndpointEntity
 import com.hubdeck.app.core.data.db.HealthSampleEntity
 import com.hubdeck.app.core.data.db.ServiceEntity
+import com.hubdeck.app.core.data.db.ServiceTagEntity
+import com.hubdeck.app.core.data.db.TagEntity
 import com.hubdeck.app.core.model.Endpoint
 import com.hubdeck.app.core.model.EndpointScope
 import com.hubdeck.app.core.model.HealthConfig
@@ -32,7 +34,8 @@ class ServiceRepositoryTest {
     private val endpointDao = FakeEndpointDao()
     private val categoryDao = FakeCategoryDao()
     private val healthDao = FakeHealthDao()
-    private val repository = ServiceRepository(serviceDao, endpointDao, categoryDao, healthDao)
+    private val tagDao = FakeTagDao()
+    private val repository = ServiceRepository(serviceDao, endpointDao, categoryDao, healthDao, tagDao)
 
     @Test
     fun `observeServices sorts pinned first then sortIndex then name`() = runTest {
@@ -63,12 +66,15 @@ class ServiceRepositoryTest {
     }
 
     @Test
-    fun `observeServices never exposes tag ids in m1`() = runTest {
+    fun `observeServices includes tag ids from service_tags`() = runTest {
         serviceDao.seed(entity(id = "a"))
+        tagDao.seed(TagEntity(id = "t1", name = "娱乐"), TagEntity(id = "t2", name = "工具"))
+        tagDao.links.add(ServiceTagEntity(serviceId = "a", tagId = "t1"))
+        tagDao.links.add(ServiceTagEntity(serviceId = "a", tagId = "t2"))
 
         val service = repository.observeServices().first().single()
 
-        assertTrue(service.tagIds.isEmpty())
+        assertEquals(listOf("t1", "t2"), service.tagIds)
     }
 
     @Test
@@ -124,6 +130,18 @@ class ServiceRepositoryTest {
     }
 
     @Test
+    fun `findService returns the service with its tag ids`() = runTest {
+        serviceDao.seed(entity(id = "a"))
+        tagDao.seed(TagEntity(id = "t1", name = "娱乐"))
+        tagDao.links.add(ServiceTagEntity(serviceId = "a", tagId = "t1"))
+
+        val service = repository.findService("a")
+
+        assertNotNull(service)
+        assertEquals(listOf("t1"), service!!.tagIds)
+    }
+
+    @Test
     fun `upsert rewrites updatedAt but keeps createdAt`() = runTest {
         val before = System.currentTimeMillis()
         val service = domainService(id = "a", createdAt = 1_000L, updatedAt = 2_000L)
@@ -144,6 +162,33 @@ class ServiceRepositoryTest {
 
         assertEquals(listOf("deleteForService", "upsertAll"), endpointDao.calls)
         assertEquals(listOf("new"), endpointDao.all().map { it.id })
+    }
+
+    @Test
+    fun `upsert updates tag associations`() = runTest {
+        serviceDao.seed(entity(id = "a"))
+        tagDao.seed(TagEntity(id = "t1", name = "旧标签"))
+        tagDao.links.add(ServiceTagEntity(serviceId = "a", tagId = "t1"))
+
+        // Upsert with new tags
+        repository.upsert(domainService(id = "a", tagIds = listOf("t2", "t3")))
+
+        // Old link should be deleted, new links added
+        assertEquals(2, tagDao.links.count { it.serviceId == "a" })
+        assertEquals(listOf("t2", "t3"), tagDao.links.filter { it.serviceId == "a" }.map { it.tagId }.sorted())
+    }
+
+    @Test
+    fun `upsert clears tags when tagIds is empty`() = runTest {
+        serviceDao.seed(entity(id = "a"))
+        tagDao.seed(TagEntity(id = "t1", name = "旧标签"))
+        tagDao.links.add(ServiceTagEntity(serviceId = "a", tagId = "t1"))
+
+        // Upsert with empty tags
+        repository.upsert(domainService(id = "a", tagIds = emptyList()))
+
+        // All links should be deleted
+        assertTrue(tagDao.links.filter { it.serviceId == "a" }.isEmpty())
     }
 
     @Test
@@ -176,6 +221,17 @@ class ServiceRepositoryTest {
         val hits = repository.searchServices("jelly")
 
         assertEquals(listOf("a"), hits.map { it.id })
+    }
+
+    @Test
+    fun `search includes tag ids`() = runTest {
+        serviceDao.seed(entity(id = "a", name = "Jellyfin"))
+        tagDao.seed(TagEntity(id = "t1", name = "娱乐"))
+        tagDao.links.add(ServiceTagEntity(serviceId = "a", tagId = "t1"))
+
+        val hits = repository.searchServices("jelly")
+
+        assertEquals(listOf("t1"), hits.single().tagIds)
     }
 
     // ------------------------------------------------------------------
@@ -241,6 +297,7 @@ class ServiceRepositoryTest {
         createdAt: Long = 0L,
         updatedAt: Long = 0L,
         endpoints: List<Endpoint> = emptyList(),
+        tagIds: List<String> = emptyList(),
     ) = Service(
         id = id,
         name = "Jellyfin",
@@ -250,5 +307,6 @@ class ServiceRepositoryTest {
         health = HealthConfig(mode = HealthMode.TCP, path = "/", timeoutMs = 3000),
         createdAt = createdAt,
         updatedAt = updatedAt,
+        tagIds = tagIds,
     )
 }

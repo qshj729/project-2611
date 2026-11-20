@@ -1,5 +1,6 @@
 package com.hubdeck.app.core.data.repo
 
+import com.hubdeck.app.core.data.db.ServiceTagEntity
 import com.hubdeck.app.core.data.db.TagDao
 import com.hubdeck.app.core.data.db.TagEntity
 import com.hubdeck.app.core.model.Tag
@@ -39,6 +40,15 @@ class TagRepository @Inject constructor(
     /** 删除标签。 */
     suspend fun delete(tagId: String) {
         tagDao.deleteById(tagId)
+    }
+
+    /** 为服务关联标签（先清空再建立）。 */
+    suspend fun setServiceTags(serviceId: String, tagIds: List<String>) {
+        tagDao.deleteLinksForService(serviceId)
+        if (tagIds.isNotEmpty()) {
+            val links = tagIds.map { ServiceTagEntity(serviceId = serviceId, tagId = it) }
+            tagDao.linkAll(links)
+        }
     }
 }
 

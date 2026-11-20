@@ -1,5 +1,6 @@
 package com.hubdeck.app.core.data.repo
 
+import com.hubdeck.app.core.data.db.ServiceTagEntity
 import com.hubdeck.app.core.data.db.TagEntity
 import com.hubdeck.app.core.model.Tag
 import kotlinx.coroutines.flow.first
@@ -73,5 +74,47 @@ class TagRepositoryTest {
         repository.delete("t1")
 
         assertTrue(tagDao.all().isEmpty())
+    }
+
+    @Test
+    fun `setServiceTags links tags to service`() = runTest {
+        tagDao.seed(
+            TagEntity(id = "t1", name = "娱乐"),
+            TagEntity(id = "t2", name = "工具"),
+        )
+
+        repository.setServiceTags("svc-1", listOf("t1", "t2"))
+
+        val links = tagDao.links.filter { it.serviceId == "svc-1" }
+        assertEquals(2, links.size)
+        assertEquals(listOf("t1", "t2"), links.map { it.tagId }.sorted())
+    }
+
+    @Test
+    fun `setServiceTags replaces existing links`() = runTest {
+        tagDao.seed(
+            TagEntity(id = "t1", name = "娱乐"),
+            TagEntity(id = "t2", name = "工具"),
+            TagEntity(id = "t3", name = "新标签"),
+        )
+        tagDao.links.add(ServiceTagEntity(serviceId = "svc-1", tagId = "t1"))
+        tagDao.links.add(ServiceTagEntity(serviceId = "svc-1", tagId = "t2"))
+
+        repository.setServiceTags("svc-1", listOf("t2", "t3"))
+
+        val links = tagDao.links.filter { it.serviceId == "svc-1" }
+        assertEquals(2, links.size)
+        assertEquals(listOf("t2", "t3"), links.map { it.tagId }.sorted())
+    }
+
+    @Test
+    fun `setServiceTags with empty list clears links`() = runTest {
+        tagDao.seed(TagEntity(id = "t1", name = "娱乐"))
+        tagDao.links.add(ServiceTagEntity(serviceId = "svc-1", tagId = "t1"))
+
+        repository.setServiceTags("svc-1", emptyList())
+
+        val links = tagDao.links.filter { it.serviceId == "svc-1" }
+        assertTrue(links.isEmpty())
     }
 }

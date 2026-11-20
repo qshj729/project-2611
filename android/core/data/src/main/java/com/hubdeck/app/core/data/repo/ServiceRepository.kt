@@ -6,6 +6,7 @@ import com.hubdeck.app.core.data.db.HealthDao
 import com.hubdeck.app.core.data.db.ServiceDao
 import com.hubdeck.app.core.data.db.ServiceEntity
 import com.hubdeck.app.core.data.db.EndpointEntity
+import com.hubdeck.app.core.data.db.ServiceTagEntity
 import com.hubdeck.app.core.data.db.toDomain
 import com.hubdeck.app.core.model.Category
 import com.hubdeck.app.core.model.Endpoint
@@ -30,6 +31,7 @@ class ServiceRepository @Inject constructor(
     private val endpointDao: EndpointDao,
     private val categoryDao: CategoryDao,
     private val healthDao: HealthDao,
+    private val tagDao: TagDao,
 ) {
 
     /**
@@ -55,15 +57,18 @@ class ServiceRepository @Inject constructor(
     }
 
     fun observeServices(): Flow<List<Service>> =
-        combine(serviceDao.observeAll(), endpointDao.allFlow()) { services, endpoints ->
+        combine(serviceDao.observeAll(), endpointDao.allFlow(), tagDao.allLinksFlow()) { services, endpoints, tagLinks ->
             val byService = endpoints.groupBy { it.serviceId }
+            val tagsByService = tagLinks.groupBy { it.serviceId }
             services
                 .map { entity ->
+                    val tagIds = tagsByService[entity.id]?.map { it.tagId } ?: emptyList()
                     entity.toDomain(
                         byService[entity.id]
                             .orEmpty()
                             .map { it.toDomain() }
-                            .sortedWith(endpointOrder)
+                            .sortedWith(endpointOrder),
+                        tagIds = tagIds
                     )
                 }
                 .sortedWith(serviceOrder)
@@ -101,7 +106,8 @@ class ServiceRepository @Inject constructor(
                 null
             } else {
                 val endpoints = endpointDao.forService(id).map { it.toDomain() }
-                entity.toDomain(endpoints)
+                val tagIds = tagDao.tagsForService(id).map { it.tagId }
+                entity.toDomain(endpoints, tagIds = tagIds)
             }
         } catch (error: Exception) {
             null
@@ -142,6 +148,12 @@ class ServiceRepository @Inject constructor(
                 )
             }
         )
+        // Update tag associations
+        tagDao.deleteLinksForService(service.id)
+        if (service.tagIds.isNotEmpty()) {
+            val links = service.tagIds.map { ServiceTagEntity(serviceId = service.id, tagId = it) }
+            tagDao.linkAll(links)
+        }
     }
 
     suspend fun delete(serviceId: String) = serviceDao.deleteById(serviceId)
@@ -163,14 +175,18 @@ class ServiceRepository @Inject constructor(
     suspend fun searchServices(query: String): List<Service> {
         val entities = serviceDao.search(query)
         val endpoints = endpointDao.forServices(entities.map { it.id })
+        val tagLinks = tagDao.allLinks()
         val byService = endpoints.groupBy { it.serviceId }
+        val tagsByService = tagLinks.groupBy { it.serviceId }
         return entities
             .map { entity ->
+                val tagIds = tagsByService[entity.id]?.map { it.tagId } ?: emptyList()
                 entity.toDomain(
                     byService[entity.id]
                         .orEmpty()
                         .map { it.toDomain() }
-                        .sortedWith(endpointOrder)
+                        .sortedWith(endpointOrder),
+                    tagIds = tagIds
                 )
             }
             .sortedWith(serviceOrder)
