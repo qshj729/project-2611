@@ -12,7 +12,7 @@ import android.widget.RemoteViews
  * 数据来自与仪表盘同一套端口（C-02 / C-05 / C-09），
  * 所以 Widget 与 App 里的收藏列表永远一致。
  */
-class HubDeckWidgetProvider : AppWidgetProvider() {
+class MyAppsWidgetProvider : AppWidgetProvider() {
 
     override fun onUpdate(
         context: Context,
@@ -22,7 +22,7 @@ class HubDeckWidgetProvider : AppWidgetProvider() {
         appWidgetIds.forEach { widgetId ->
             val views = RemoteViews(
                 context.packageName,
-                com.hubdeck.feature.dashboard.R.layout.widget_hubdeck,
+                com.hubdeck.feature.dashboard.R.layout.widget_myapps,
             )
             // 显式指向 RemoteViewsService：系统会去绑定它，于是 Hilt 的注入能生效。
             @Suppress("DEPRECATION")
@@ -32,7 +32,7 @@ class HubDeckWidgetProvider : AppWidgetProvider() {
             )
             views.setEmptyView(
                 com.hubdeck.feature.dashboard.R.id.widget_list,
-                com.hubdeck.feature.dashboard.R.layout.widget_hubdeck_empty,
+                com.hubdeck.feature.dashboard.R.layout.widget_myapps_empty,
             )
             appWidgetManager.updateAppWidget(widgetId, views)
         }

@@ -12,8 +12,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.hubdeck.app.core.tunnel.TunnelProvider
-import com.hubdeck.app.ui.HubDeckApp
-import com.hubdeck.app.ui.theme.HubDeckTheme
+import com.hubdeck.app.ui.MyAppsApp
+import com.hubdeck.app.ui.theme.MyAppsTheme
 import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
@@ -23,7 +23,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            HubDeckTheme {
+            MyAppsTheme {
                 TunnelAwareApp()
             }
         }
@@ -36,7 +36,7 @@ fun TunnelAwareApp() {
 
     // Get Hilt entry point for dependencies
     val entryPoint = dagger.hilt.android.EntryPointAccessors.fromApplication(
-        context, com.hubdeck.app.di.HubDeckApplicationEntryPoint::class.java
+        context, com.hubdeck.app.di.MyAppsApplicationEntryPoint::class.java
     )
 
     // Use Hilt-provided TunnelManager (singleton)
@@ -63,5 +63,5 @@ fun TunnelAwareApp() {
         // TunnelManager handles proxy config updates internally
     }
 
-    HubDeckApp()
+    MyAppsApp()
 }

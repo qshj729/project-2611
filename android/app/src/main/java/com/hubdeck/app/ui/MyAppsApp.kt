@@ -23,7 +23,7 @@ private object Routes {
 }
 
 @Composable
-fun HubDeckApp() {
+fun MyAppsApp() {
     val navController = rememberNavController()
 
     NavHost(navController = navController, startDestination = Routes.DASHBOARD) {
