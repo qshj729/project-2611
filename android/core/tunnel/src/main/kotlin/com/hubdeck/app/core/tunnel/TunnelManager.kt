@@ -391,7 +391,8 @@ private class FileStateStore(private val dir: File) : StateStore {
         }
     }
 
-    override fun write(key: String, bytes: ByteArray) {
+    override fun write(key: String, bytes: ByteArray?) {
+        if (bytes == null) return
         val file = File(dir, key.replace(Regex("[^A-Za-z0-9._-]"), "_"))
         try {
             if (!dir.exists()) dir.mkdirs()
