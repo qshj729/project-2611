@@ -3,6 +3,7 @@ name: CI Emulator
 # 通道 E：GitHub Actions 里的 Android 模拟器（唯一设备通道）。
 # 2026-11-13 CEO 决策：本地编译环境已下线，本仓库不再在本机构建，
 # 构建 / 单测 / Lint / 界面截图全部以本仓库的 Actions 结果为准。
+# 2026-11-19 更新：仅里程碑/手动/主分支跑，PR 不再自动跑（省 runner-min，避免 TCG 假红）。
 #
 # 产物（artifact）就是验收证据：
 #   hubdeck-emulator-apk     —— 被测 APK
@@ -11,13 +12,9 @@ name: CI Emulator
 
 on:
   workflow_dispatch:
-  pull_request:
-    branches: ["**"]
-    paths:
-      - "android/**"
-      - "scripts/**"
-      - ".github/workflows/ci-emulator.yml"
   push:
+    tags:
+      - 'v*'
     branches: [main]
     paths:
       - "android/**"
@@ -83,6 +80,7 @@ jobs:
           name: hubdeck-build-logs
           path: .build-logs/
           if-no-files-found: warn
+          retention-days: 30
 
       - name: 启动模拟器并取证
         uses: reactivecircus/android-emulator-runner@v2
@@ -98,6 +96,10 @@ jobs:
             -memory 3072 -cores 2 -no-passive-gps
           script: scripts/ci-emulator-probe.sh
 
+      - name: 跑 Compose UI 测试（connectedAndroidTest）
+        working-directory: android
+        run: ./gradlew connectedDebugAndroidTest --max-workers=1
+
       - name: 收集截图 / UI 树 / logcat
         if: always()
         uses: actions/upload-artifact@v4
@@ -105,6 +107,7 @@ jobs:
           name: hubdeck-emulator-shots
           path: emulator-evidence/
           if-no-files-found: warn
+          retention-days: 30
 
       - name: 上传被测 APK
         if: always()
@@ -113,3 +116,4 @@ jobs:
           name: hubdeck-emulator-apk
           path: android/app/build/outputs/apk/debug/*.apk
           if-no-files-found: error
+          retention-days: 30

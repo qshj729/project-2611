@@ -108,6 +108,7 @@ fun BrowserRoute(
         onPageStarted = viewModel::onPageStarted,
         onPageFinished = viewModel::onPageFinished,
         onReceivedError = viewModel::onReceivedError,
+        commands = viewModel.commands,
         modifier = modifier,
     )
 }
@@ -141,6 +142,7 @@ fun BrowserContent(
     onPageStarted: (String?) -> Unit,
     onPageFinished: (String?, Boolean, Boolean) -> Unit,
     onReceivedError: (String) -> Unit,
+    commands: kotlinx.coroutines.channels.ReceiveChannel<BrowserCommand>,
     modifier: androidx.compose.ui.Modifier = androidx.compose.ui.Modifier,
 ) {
     val context = LocalContext.current
@@ -151,6 +153,12 @@ fun BrowserContent(
         onPageFinished = onPageFinished,
         onReceivedError = onReceivedError,
     ) }
+
+    // 用户正在输入的文本（与 currentUrl 解耦）
+    val userInputText = remember { mutableStateOf(uiState.urlInput) }
+
+    // WebView 实例引用，用于执行导航命令
+    val webViewRef = remember { mutableStateOf<android.webkit.WebView?>(null) }
 
     // 处理授权 URL 打开
     LaunchedEffect(uiState.tunnelState) {
@@ -173,13 +181,34 @@ fun BrowserContent(
         }
     }
 
+    // 消费 ViewModel 发来的导航命令
+    LaunchedEffect(Unit) {
+        scope.launch {
+            while (true) {
+                val cmd = commands.receive()
+                val webView = webViewRef.value
+                if (webView != null) {
+                    when (cmd) {
+                        is BrowserCommand.GoBack -> if (webView.canGoBack()) webView.goBack()
+                        is BrowserCommand.GoForward -> if (webView.canGoForward()) webView.goForward()
+                        is BrowserCommand.Reload -> webView.reload()
+                        is BrowserCommand.StopLoading -> webView.stopLoading()
+                    }
+                }
+            }
+        }
+    }
+
     Scaffold(
         modifier = modifier.fillMaxSize(),
         topBar = {
             BrowserTopAppBar(
                 uiState = uiState,
                 onBack = onBack,
-                onUrlInputChange = onUrlInputChange,
+                onUrlInputChange = { text ->
+                    userInputText.value = text
+                    onUrlInputChange(text)
+                },
                 onSubmitUrl = onSubmitUrl,
                 onGoBack = onGoBack,
                 onGoForward = onGoForward,
@@ -187,6 +216,7 @@ fun BrowserContent(
                 onReload = onReload,
                 onToggleBookmark = onToggleBookmark,
                 isBookmarked = uiState.bookmarks.any { it.url == uiState.currentUrl },
+                userInputText = userInputText,
             )
         },
         snackbarHost = { SnackbarHost(snackbarHostState) },
@@ -197,7 +227,7 @@ fun BrowserContent(
                 modifier = Modifier.fillMaxSize(),
                 url = if (uiState.showStartPage) null else uiState.currentUrl,
                 webViewClient = webViewClient,
-                onUrlChange = { url -> onPageStarted(url) }, // 简化处理
+                webViewRef = webViewRef,
             )
 
             // 导航页（起始页）
@@ -248,12 +278,13 @@ private fun BrowserTopAppBar(
     onReload: () -> Unit,
     onToggleBookmark: () -> Unit,
     isBookmarked: Boolean,
+    userInputText: androidx.compose.runtime.MutableState<String>,
 ) {
     TopAppBar(
         title = {
-            // 地址栏
+            // 地址栏：显示用户正在输入的文本，不被 currentUrl 覆盖
             OutlinedTextField(
-                value = uiState.urlInput,
+                value = userInputText.value,
                 onValueChange = onUrlInputChange,
                 modifier = Modifier
                     .fillMaxWidth()
@@ -719,35 +750,45 @@ fun AndroidWebView(
     modifier: androidx.compose.ui.Modifier = androidx.compose.ui.Modifier,
     url: String?,
     webViewClient: BrowserWebViewClient,
-    onUrlChange: (String) -> Unit,
+    webViewRef: androidx.compose.runtime.MutableState<android.webkit.WebView?>
 ) {
     val context = LocalContext.current
-    val webView = remember {
-        android.webkit.WebView(context).apply {
-            settings.javaScriptEnabled = true
-            settings.domStorageEnabled = true
-            settings.mixedContentMode = android.webkit.WebSettings.MIXED_CONTENT_COMPATIBILITY_MODE
-            settings.useWideViewPort = true
-            settings.loadWithOverviewMode = true
-            this.webViewClient = webViewClient
-        }
-    }
-
-    DisposableEffect(url) {
-        url?.let {
-            webView.loadUrl(it)
-        }
-        onDispose {
-            webView.clearHistory()
-            webView.destroy()
-        }
-    }
 
     androidx.compose.ui.viewinterop.AndroidView(
         modifier = modifier,
-        factory = { webView },
+        factory = {
+            android.webkit.WebView(context).apply {
+                settings.javaScriptEnabled = true
+                settings.domStorageEnabled = true
+                settings.mixedContentMode = android.webkit.WebSettings.MIXED_CONTENT_COMPATIBILITY_MODE
+                settings.useWideViewPort = true
+                settings.loadWithOverviewMode = true
+                this.webViewClient = webViewClient
+            }.also { webViewRef.value = it }
+        },
         update = { it.webViewClient = webViewClient },
     )
+
+    // URL 变化时加载新 URL，不销毁 WebView 实例
+    DisposableEffect(url) {
+        url?.let {
+            webViewRef.value?.loadUrl(it)
+        }
+        onDispose {}
+    }
+
+    // 组件离开组合时清理
+    DisposableEffect(Unit) {
+        onDispose {
+            webViewRef.value?.let {
+                it.stopLoading()
+                it.clearHistory()
+                // 注意：不调用 destroy()，避免复用已销毁的 WebView 导致崩溃
+                // WebView 会随 Activity 生命周期自动清理
+            }
+            webViewRef.value = null
+        }
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -782,6 +823,7 @@ private fun BrowserContentPreview() {
             onPageStarted = {},
             onPageFinished = { _, _, _ -> },
             onReceivedError = {},
+            commands = kotlinx.coroutines.channels.Channel(kotlinx.coroutines.channels.Channel.UNLIMITED),
         )
     }
 }
@@ -821,6 +863,7 @@ private fun BrowserContentPreview_Connected() {
             onPageStarted = {},
             onPageFinished = { _, _, _ -> },
             onReceivedError = {},
+            commands = kotlinx.coroutines.channels.Channel(kotlinx.coroutines.channels.Channel.UNLIMITED),
         )
     }
 }
@@ -855,6 +898,7 @@ private fun BrowserContentPreview_NeedsAuth() {
             onPageStarted = {},
             onPageFinished = { _, _, _ -> },
             onReceivedError = {},
+            commands = kotlinx.coroutines.channels.Channel(kotlinx.coroutines.channels.Channel.UNLIMITED),
         )
     }
 }

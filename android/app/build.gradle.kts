@@ -7,6 +7,57 @@ plugins {
     alias(libs.plugins.hilt)
 }
 
+import java.util.Properties
+
+// ---------------------------------------------------------------------------
+// 签名配置（2026-11-20）
+//
+// 密钥来源优先级：
+//   1) CI：环境变量 HUBDECK_KEYSTORE_PATH / _PASSWORD / _KEY_ALIAS / _KEY_PASSWORD
+//      （值来自 GitHub Secrets；密钥本体以 base64 形式先落盘到 HUBDECK_KEYSTORE_PATH）
+//   2) 本地：android/keystore/myapps.p12 + android/keystore/myapps-signing.properties
+//      （这两个路径已在 .gitignore 里，绝不入库）
+//
+// 两边都没有 → 不配置 signingConfig（构建仍然能跑，只是产出未签名 APK）。
+// ---------------------------------------------------------------------------
+val keystorePath = System.getenv("HUBDECK_KEYSTORE_PATH")
+val keystorePassword = System.getenv("HUBDECK_KEYSTORE_PASSWORD")
+val keyAlias = System.getenv("HUBDECK_KEYSTORE_KEY_ALIAS")
+val keyPassword = System.getenv("HUBDECK_KEYSTORE_KEY_PASSWORD")
+
+val localKeystoreDir = rootProject.file("keystore")
+val localSigningProps = localKeystoreDir.resolve("myapps-signing.properties")
+
+// 本地 properties 兜底（读文件里的 storePassword/keyPassword）
+val localProps = Properties().apply {
+    if (localSigningProps.exists()) {
+        localSigningProps.inputStream().use { load(it) }
+    }
+}
+
+val hasCiSigning = !keystorePath.isNullOrBlank() &&
+    !keystorePassword.isNullOrBlank() &&
+    !keyAlias.isNullOrBlank() &&
+    !keyPassword.isNullOrBlank()
+
+val hasLocalSigning = localSigningProps.exists() && localKeystoreDir.resolve("myapps.p12").exists()
+
+val useSigning = hasCiSigning || hasLocalSigning
+val effectiveKeystoreFile: File? = when {
+    hasCiSigning -> file(keystorePath!!)
+    hasLocalSigning -> localKeystoreDir.resolve("myapps.p12")
+    else -> null
+}
+val effectiveStorePassword = if (hasCiSigning) keystorePassword else localProps.getProperty("storePassword")
+// PKCS12 的 key 密码默认跟 store 密码一样（Java 的 PKCS12 实现忽略 keypass）。
+// 只有显式给了不同的 key 密码时才用独立值。
+val effectiveKeyPassword = when {
+    hasCiSigning && !keyPassword.isNullOrBlank() -> keyPassword
+    hasLocalSigning && !localProps.getProperty("keyPassword").isNullOrBlank() -> localProps.getProperty("keyPassword")
+    else -> effectiveStorePassword
+}
+val effectiveAlias = if (hasCiSigning) keyAlias else localProps.getProperty("keyAlias")
+
 android {
     namespace = "com.hubdeck.app"
     compileSdk = 35
@@ -21,9 +72,24 @@ android {
         vectorDrawables.useSupportLibrary = true
     }
 
+    if (useSigning) {
+        signingConfigs {
+            create("myapps") {
+                storeFile = effectiveKeystoreFile
+                storeType = "PKCS12"
+                this.keyAlias = effectiveAlias
+                storePassword = effectiveStorePassword
+                this.keyPassword = effectiveKeyPassword
+            }
+        }
+    }
+
     buildTypes {
         debug {
             applicationIdSuffix = ".debug"
+            if (useSigning) {
+                signingConfig = signingConfigs.getByName("myapps")
+            }
         }
         release {
             isMinifyEnabled = true
@@ -32,6 +98,9 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro",
             )
+            if (useSigning) {
+                signingConfig = signingConfigs.getByName("myapps")
+            }
         }
     }
 

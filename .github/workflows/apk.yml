@@ -19,6 +19,14 @@ jobs:
   build:
     name: 构建隧道版 Debug APK
     runs-on: ubuntu-latest
+    env:
+      # 注意：GitHub 不允许在 step 的 if: 里直接引用 secrets，
+      # 所以先把 secret 提到 job 级 env，step 里用 env.* 判断。
+      HUBDECK_KEYSTORE_BASE64: ${{ secrets.HUBDECK_KEYSTORE_BASE64 }}
+      HUBDECK_KEYSTORE_PATH: ${{ secrets.HUBDECK_KEYSTORE_PATH }}
+      HUBDECK_KEYSTORE_PASSWORD: ${{ secrets.HUBDECK_KEYSTORE_PASSWORD }}
+      HUBDECK_KEYSTORE_KEY_ALIAS: ${{ secrets.HUBDECK_KEYSTORE_KEY_ALIAS }}
+      HUBDECK_KEYSTORE_KEY_PASSWORD: ${{ secrets.HUBDECK_KEYSTORE_KEY_PASSWORD }}
     defaults:
       run:
         # Gradle 工程在 android/ 下，所有 gradle 命令都从这里跑
@@ -58,10 +66,33 @@ jobs:
           gradle-version: '8.11.1'
           allow-checksums: '2db75c40782f5e8ba1fc278a5574bab070adccb2d21ca5a6e5ed840888448046'
 
-      - name: 构建隧道版 Debug APK
+      - name: 还原签名密钥（来自 GitHub Secrets）
+        # keystore 本体以 base64 存在 Secrets 里；这里落盘到工作区（路径已在 .gitignore）。
+        # 没配 Secrets 时跳过 → 产出未签名 APK（普通 CI / 本地开发场景）。
+        working-directory: .
+        run: |
+          if [ -z "$HUBDECK_KEYSTORE_BASE64" ]; then
+            echo "::warning::未配置 HUBDECK_KEYSTORE_BASE64 —— 产出未签名 APK"
+            exit 0
+          fi
+          KEY_PATH="${HUBDECK_KEYSTORE_PATH:-android/keystore/myapps.p12}"
+          mkdir -p "$(dirname "$KEY_PATH")"
+          printf '%s' "$HUBDECK_KEYSTORE_BASE64" | base64 -d > "$KEY_PATH"
+          chmod 600 "$KEY_PATH"
+          echo "→ 密钥已落盘：$KEY_PATH"
+
+      - name: 构建隧道版 Debug APK（唯一构建入口）
         # 与本地 `scripts/build.sh :app:assembleDebug` 完全同命令
         working-directory: .
         run: scripts/build.sh :app:assembleDebug
+
+      - name: 校验 APK 签名
+        if: env.HUBDECK_KEYSTORE_BASE64 != ''
+        working-directory: .
+        run: |
+          APK=$(ls android/app/build/outputs/apk/debug/*.apk | head -1)
+          echo "→ 校验签名：$APK"
+          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --print-certs "$APK"
 
       - name: 上传隧道版 debug APK
         uses: actions/upload-artifact@v4
@@ -69,3 +100,4 @@ jobs:
           name: hubdeck-tunnel-debug-apk
           path: android/app/build/outputs/apk/debug/*.apk
           if-no-files-found: error
+          retention-days: 30

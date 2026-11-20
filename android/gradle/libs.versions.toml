@@ -20,7 +20,9 @@ browser = "1.8.0"
 webkit = "1.18.0"
 junit = "4.13.2"
 mockito = "5.14.2"
+mockitoKotlin = "6.4.0"
 androidxJunit = "1.2.1"
+androidxArchCoreTesting = "2.2.0"
 espresso = "3.6.1"
 mockWebServer = "4.12.0"
 coroutines = "1.9.0"
@@ -28,6 +30,8 @@ klethronTsnet = "0.14.0"
 
 [libraries]
 mockito-core = { module = "org.mockito:mockito-core", version.ref = "mockito" }
+mockito-kotlin = { module = "org.mockito.kotlin:mockito-kotlin", version.ref = "mockitoKotlin" }
+androidx-arch-core-testing = { module = "androidx.arch.core:core-testing", version.ref = "androidxArchCoreTesting" }
 androidx-core-ktx = { module = "androidx.core:core-ktx", version.ref = "coreKtx" }
 androidx-activity-compose = { module = "androidx.activity:activity-compose", version.ref = "activityCompose" }
 androidx-lifecycle-runtime-ktx = { module = "androidx.lifecycle:lifecycle-runtime-ktx", version.ref = "lifecycle" }

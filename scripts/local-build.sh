@@ -19,6 +19,10 @@ set -uo pipefail
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$REPO_ROOT"
 
+# HOME 在 sudo 下可能未设置，兜底用 jack 的 home
+HOME="${HOME:-/home/jack}"
+export HOME
+
 log() { printf '→ %s\n' "$*"; }
 die() { printf '✗ %s\n' "$*" >&2; exit 1; }
 
@@ -108,7 +112,21 @@ if ! grep -q '^org\.gradle\.cache\.cleanup=' "$GRADLE_PROPS" 2>/dev/null; then
 fi
 
 # ---------------------------------------------------------------------------
-# 5. 跑任务
+# 5. 串行化锁（与 scripts/build.sh 共用同一把锁，避免本地多 gradle 并行 OOM）
+# ---------------------------------------------------------------------------
+LOG_DIR="${HUBDECK_LOCAL_LOG_DIR:-$REPO_ROOT/.build-logs}"
+mkdir -p "$LOG_DIR"
+BUILD_LOCK="$LOG_DIR/build.lock"
+LOCK_WAIT="${HUBDECK_BUILD_LOCK_WAIT:-2400}"
+exec 9>"$BUILD_LOCK"
+if ! flock -w "$LOCK_WAIT" 9; then
+  echo "→ 等构建锁超过 ${LOCK_WAIT}s，放弃（另一个 gradle 还在跑）" >&2
+  exit 75
+fi
+echo "→ 取得构建锁 $BUILD_LOCK"
+
+# ---------------------------------------------------------------------------
+# 6. 跑任务
 # ---------------------------------------------------------------------------
 TASKS=()
 WITH_ASSEMBLE=0
@@ -126,13 +144,12 @@ if [ "${#TASKS[@]}" -eq 0 ]; then
   [ "$WITH_ASSEMBLE" = "1" ] && TASKS+=(:app:assembleDebug)
 fi
 
-LOG_DIR="${HUBDECK_LOCAL_LOG_DIR:-$REPO_ROOT/.build-logs}"
-mkdir -p "$LOG_DIR"
 LOG_FILE="$LOG_DIR/local-build-$(date +%Y%m%d-%H%M%S).log"
 
 log "gradle ${TASKS[*]}"
 log "日志: $LOG_FILE"
 
+export GRADLE_USER_HOME="${GRADLE_USER_HOME:-$HOME/.gradle}"
 cd "$REPO_ROOT/android"
 set -o pipefail
 ./gradlew "${TASKS[@]}" --max-workers="${HUBDECK_LOCAL_WORKERS:-1}" 2>&1 | tee "$LOG_FILE"

@@ -2,8 +2,17 @@ name: CI
 
 on:
   push:
-    branches: [main, 'feat/**']
+    branches: [main]
+    paths:
+      - 'android/**'
+      - 'scripts/**'
+      - '.github/workflows/**'
   pull_request:
+    paths:
+      - 'android/**'
+      - 'scripts/**'
+      - '.github/workflows/**'
+  workflow_dispatch:
 
 # CI 只读仓库，不需要写权限
 permissions:
@@ -90,6 +99,10 @@ jobs:
         working-directory: .
         run: scripts/build.sh :app:assembleDebug testDebugUnitTest :app:lintDebug
 
+      - name: Release 构建 + lintVitalRelease（验证 R8 / ProGuard / release 必炸问题）
+        working-directory: .
+        run: scripts/build.sh :app:assembleRelease :app:lintVitalRelease
+
       - name: 校验单测真的执行了（防 NO-SOURCE 假绿）
         working-directory: .
         env:
@@ -103,6 +116,18 @@ jobs:
           name: hubdeck-debug-apk
           path: android/app/build/outputs/apk/debug/*.apk
           if-no-files-found: error
+          retention-days: 30
+
+      - name: 上传 release APK + lintVitalRelease 报告
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: hubdeck-release-apk
+          path: |
+            android/app/build/outputs/apk/release/*.apk
+            android/app/build/outputs/bundle/release/*.aab
+          if-no-files-found: warn
+          retention-days: 30
 
       - name: 上传单测与 Lint 报告
         if: always()
@@ -112,4 +137,6 @@ jobs:
           path: |
             android/**/build/reports/tests/testDebugUnitTest/
             android/app/build/reports/lint-results-debug.html
+            android/app/build/reports/lint-results-release.html
           if-no-files-found: warn
+          retention-days: 30

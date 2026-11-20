@@ -4,6 +4,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.hubdeck.app.core.model.TailnetState
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.channels.ReceiveChannel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -124,6 +126,7 @@ class BrowserViewModel @Inject constructor(
 
         val url = normalizeUrl(input)
         _urlInput.value = url
+        _currentUrl.value = url
         _showStartPage.value = false
         _loadError.value = null
         _isLoading.value = true
@@ -167,19 +170,24 @@ class BrowserViewModel @Inject constructor(
         _loadError.value = error
     }
 
+    /** WebView 命令总线：把导航命令真实送到 WebView 实例。 */
+    val commandBus = Channel<BrowserCommand>(Channel.UNLIMITED)
+    val commands: ReceiveChannel<BrowserCommand> = commandBus
+
     /** 前进。 */
     fun onGoForward() {
-        // 实际导航由 WebView 客户端处理
+        commandBus.trySend(BrowserCommand.GoForward)
     }
 
     /** 后退。 */
     fun onGoBack() {
-        // 实际导航由 WebView 客户端处理
+        commandBus.trySend(BrowserCommand.GoBack)
     }
 
     /** 停止加载。 */
     fun onStopLoading() {
         _isLoading.value = false
+        commandBus.trySend(BrowserCommand.StopLoading)
     }
 
     /** 重载。 */
@@ -189,6 +197,7 @@ class BrowserViewModel @Inject constructor(
             _loadError.value = null
             _isLoading.value = true
             _showStartPage.value = false
+            commandBus.trySend(BrowserCommand.Reload)
         }
     }
 
@@ -218,6 +227,7 @@ class BrowserViewModel @Inject constructor(
     /** 打开收藏。 */
     fun onOpenBookmark(bookmark: Bookmark) {
         _urlInput.value = bookmark.url
+        _currentUrl.value = bookmark.url
         _showStartPage.value = false
         _loadError.value = null
         _isLoading.value = true
@@ -235,6 +245,7 @@ class BrowserViewModel @Inject constructor(
     /** 点击导航页入口。 */
     fun onOpenStartEntry(entry: StartPageEntry) {
         _urlInput.value = entry.url
+        _currentUrl.value = entry.url
         _showStartPage.value = false
         _loadError.value = null
         _isLoading.value = true
@@ -298,3 +309,11 @@ data class BrowserUiState(
     val startPageEntries: List<StartPageEntry> = emptyList(),
     val tunnelState: TunnelState = TunnelState.Disconnected,
 )
+
+/** WebView 导航命令。 */
+sealed interface BrowserCommand {
+    data object GoBack : BrowserCommand
+    data object GoForward : BrowserCommand
+    data object Reload : BrowserCommand
+    data object StopLoading : BrowserCommand
+}

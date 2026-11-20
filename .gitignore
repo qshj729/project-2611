@@ -12,6 +12,19 @@ captures/
 # 本地工具链与缓存（不进版本库）
 .toolchain/
 
+# 签名材料与密钥（绝对不进版本库）
+# 私钥/keystore/密码泄露 == 任何人可伪造同包名应用。
+# CI 需要签名时，走 GitHub Secrets：
+#   HUBDECK_KEYSTORE_BASE64 / HUBDECK_KEYSTORE_PASSWORD
+#   HUBDECK_KEYSTORE_KEY_ALIAS / HUBDECK_KEYSTORE_KEY_PASSWORD
+android/keystore/
+*.p12
+*.jks
+*.keystore
+keystore/
+*signing.properties
+local.properties
+
 # OS
 .DS_Store
 Thumbs.db
