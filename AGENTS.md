@@ -22,13 +22,15 @@
 
 ## 2. 权威工作区与 Git 规范
 
-### 唯一代码副本
-```
-/home/jack/.paperclip/instances/default/projects/f10f9109-c653-4ea3-a4cc-27ab49be3ea5/3e162065-c840-4b27-a56a-5deecd1953be/_default
-```
-- 你被启动的那个目录**不是**代码副本，不要在那里改代码、不要在那里初始化仓库
-- 开工前先执行 `git status` 与 `git log --oneline -3`，确认没有别人的未提交改动
-- 远端为 `https://github.com/qshj729/hubdeck.git`；push 前确认任务是否授权推远端
+### 工作区与 Git 结构
+- 你被启动的 `/home/jack/project-2611` 就是**权威工作区**（代码唯一正本），直接在这里改代码、提交即可。
+- **每个任务会有自己的 git worktree**（分支隔离、互不污染）；在当前工作区 / 你的任务 worktree 里正常作业，不要 `git init` / 重新克隆，也不要 `git checkout .`、`git reset --hard` 别人的改动。
+- 开工前先执行 `git status` 与 `git log --oneline -3`，确认没有别人的未提交改动。
+- 远端为 `https://github.com/qshj729/hubdeck.git`；push 前确认任务是否授权推远端。
+
+### 本机环境注意（每个新 shell 先确认）
+- Bash 工具环境里 **`$HOME` 默认可能为空**：会导致 `git config --global` 报 `$HOME not set`、`git status` 报 `dubious ownership`。每次新 shell 先 `export HOME=/home/jack` 再跑 git。
+- 首次遇到 `fatal: detected dubious ownership` 时，执行一次 `git config --global --add safe.directory /home/jack/project-2611`（仓库属主与运行用户不一致所致，已加过则忽略）。
 
 ### 共享仓库纪律
 - 只 `git add` 自己负责的目录，禁止 `git add -A`、`git checkout .`、`git reset --hard`
@@ -68,7 +70,7 @@
 1. **完成定义**：按各角色专属定义执行
 2. **证据要求**：每项变更/验收配对应 Actions run 链接 + artifact 名 + 结论行
 3. **交接契约**：接口或实体语义要变，先在任务下留言给相关 owner 升 `docs/contracts.md` 版本，再动手
-4. **禁做清单**：不在代码、测试夹具或文档里写真实凭据；不擅自改动已公示的实体字段语义；不本地打 APK、不下载 JDK / SDK / system image、不起本地模拟器
+4. **禁做清单**：不在代码、测试夹具或文档里写真实凭据；不擅自改动已公示的实体字段语义；不本地打 APK、不下载 JDK / SDK / system image、不起本地模拟器；不把任务个人工作文件（任务清单 / todos / 草稿 / 抓取日志等）写进代码仓库——这类资料统一落到项目文档区 `/home/jack/project-2611-docs`，不要 `git add` 进代码副本（参考 `todos.md` 误留仓库的先例，属 CMP-52 非本分支内容）；并在 `.gitignore` 加对应忽略项（如 `.paperclip/`、`logs.zip`）兜底，防止误入库
 5. **阻塞与升级**：真阻塞用 `blockedByIssueIds` 或带 owner 的 `unblockDescriptor`，并写清下一步；需要跨角色配合时留言给对应 owner
 6. **沟通**：见第 1 节
 
@@ -83,10 +85,19 @@
 - `docs/acceptance-template.md` — 验收模板
 - `docs/device-test-channel.md` — 设备通道手册
 - `docs/incidents/` — 事故复盘记录
+- `/home/jack/project-2611-docs/` — 项目级文档区（任务清单 / 草稿 / 跨分支资料；不进代码仓库，见 §4.4 禁做清单）
 
 ---
 
-## 6. 引用方式
+## 6. 关键运维记录（引用外部笔记）
+
+- **2026-11-20**：清理 8 个废弃 "Chat with X" issues（CMP-17/22/23/24/34/35/39/40）→ `cancelled`
+  - 约束 `issues_conversation_identity_check` 要求先清空会话字段再置状态
+  - 详见：`/root/notes/hubdeck/2026-11-20-cancel-chat-with-x-issues.md`
+
+---
+
+## 7. 引用方式
 
 在各角色的 AGENTS.md 文件开头添加：
 
