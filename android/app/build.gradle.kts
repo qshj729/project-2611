@@ -63,7 +63,7 @@ android {
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.hubdeck.app"
+        applicationId = "top.quup.myapps"
         minSdk = 34
         targetSdk = 35
         versionCode = 1
