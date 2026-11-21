@@ -1,4 +1,4 @@
-package app.core
+package app.core.tailscale
 
 import app.core.model.NetworkContext
 import app.core.model.TailnetSource
