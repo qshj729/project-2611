@@ -39,9 +39,9 @@ case "$args" in
   "shell dumpsys window"*)
     case "$scenario" in
       focus_null) echo "  mCurrentFocus=null" ;;
-      *) echo "  mCurrentFocus=Window{9f1b2c u0 com.hubdeck.app.debug/com.hubdeck.app.MainActivity}" ;;
+      *) echo "  mCurrentFocus=Window{9f1b2c u0 top.quup.myapps.debug/app.MainActivity}" ;;
     esac
-    echo "  mFocusedApp=ActivityRecord{748298a u0 com.hubdeck.app.debug/.MainActivity t7}"
+    echo "  mFocusedApp=ActivityRecord{748298a u0 top.quup.myapps.debug/.MainActivity t7}"
     exit 0 ;;
   "shell service check package"*)
     case "$scenario" in
@@ -56,17 +56,17 @@ case "$args" in
         exit 1 ;;
       *) echo "Performing Streamed Install"; echo "Success"; exit 0 ;;
     esac ;;
-  "shell pm path"*) echo "package:/data/app/com.hubdeck.app.debug/base.apk"; exit 0 ;;
+  "shell pm path"*) echo "package:/data/app/top.quup.myapps.debug/base.apk"; exit 0 ;;
   "logcat -c"*) exit 0 ;;
   "shell am force-stop"*) exit 0 ;;
-  "shell am start"*) echo "Starting: Intent { cmp=com.hubdeck.app.debug/com.hubdeck.app.MainActivity }"; exit 0 ;;
+  "shell am start"*) echo "Starting: Intent { cmp=top.quup.myapps.debug/app.MainActivity }"; exit 0 ;;
   "exec-out screencap -p"*) printf '\211PNG\r\n\032\nfake-image-bytes'; exit 0 ;;
   "shell uiautomator dump"*) exit 0 ;;
   "pull "*)
     dest="${args##* }"
-    printf '<hierarchy><node package="com.hubdeck.app.debug" text="HubDeck" /></hierarchy>' >"$dest"
+    printf '<hierarchy><node package="top.quup.myapps.debug" text="HubDeck" /></hierarchy>' >"$dest"
     exit 0 ;;
-  "shell dumpsys activity activities"*) echo "  mResumedActivity: ActivityRecord{com.hubdeck.app.debug/.MainActivity}"; exit 0 ;;
+  "shell dumpsys activity activities"*) echo "  mResumedActivity: ActivityRecord{top.quup.myapps.debug/.MainActivity}"; exit 0 ;;
   "logcat -d "*) exit 0 ;;
   "shell pidof"*) echo "12345"; exit 0 ;;
   *) exit 0 ;;

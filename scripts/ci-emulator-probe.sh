@@ -20,7 +20,7 @@
 #      进程被杀掉，UI 树里只剩 launcher，而旧的判定只看 mFocusedApp 会误判为通过。
 #      → 焦点判定必须看 mCurrentFocus；并且不通过要重启一次再取证。
 #   3) mFocusedApp 在窗口没获得焦点时仍然指向我们的包（2026-11-18 实测
-#      mFocusedApp=com.hubdeck.app.debug 而 mCurrentFocus 是 systemui 的 ANR 弹窗），
+#      mFocusedApp=top.quup.myapps.debug 而 mCurrentFocus 是 systemui 的 ANR 弹窗），
 #      所以焦点判定只看 mCurrentFocus。
 #
 # 证据口径（见 docs/ci-only-policy.md）：
@@ -35,8 +35,8 @@ set -uo pipefail
 
 EVIDENCE_DIR="${EVIDENCE_DIR:-emulator-evidence}"
 APK_PATH="${APK_PATH:-android/app/build/outputs/apk/debug/app-debug.apk}"
-PACKAGE="${HUB_DECK_PACKAGE:-com.hubdeck.app.debug}"
-ACTIVITY="${HUB_DECK_ACTIVITY:-com.hubdeck.app.MainActivity}"
+PACKAGE="${HUB_DECK_PACKAGE:-top.quup.myapps.debug}"
+ACTIVITY="${HUB_DECK_ACTIVITY:-app.MainActivity}"
 SETTLE_WAIT="${SETTLE_WAIT:-300}"   # 等系统安定（开机后 SystemUI 还在忙）
 FOCUS_WAIT="${FOCUS_WAIT:-300}"     # 等我们的窗口拿到焦点
 RENDER_WAIT="${RENDER_WAIT:-20}"    # 拿到焦点后再等渲染

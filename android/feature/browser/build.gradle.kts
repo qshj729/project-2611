@@ -10,7 +10,7 @@ plugins {
 }
 
 android {
-    namespace = "com.hubdeck.feature.browser"
+    namespace = "app.feature.browser"
     compileSdk = 35
 
     defaultConfig {

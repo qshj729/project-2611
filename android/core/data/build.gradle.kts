@@ -1,7 +1,7 @@
 // :core:data —— Room / Repository / 导入导出 / DataStore（docs/design.md §7.2）
 //
 // 归属：roadmap §2 的 A 线（数据与配置）。
-// 包名暂时保持 com.hubdeck.app.core.data.*，待 A 线负责人搬迁时统一收敛。
+// 包名暂时保持 app.core.data.*，待 A 线负责人搬迁时统一收敛。
 plugins {
     alias(libs.plugins.android.library)
     alias(libs.plugins.kotlin.android)
@@ -10,7 +10,7 @@ plugins {
 }
 
 android {
-    namespace = "com.hubdeck.core.data"
+    namespace = "app.core.data"
     compileSdk = 35
 
     defaultConfig {

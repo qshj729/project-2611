@@ -11,7 +11,7 @@ plugins {
 }
 
 android {
-    namespace = "com.hubdeck.core.tunnel"
+    namespace = "app.core.tunnel"
     compileSdk = 35
 
     defaultConfig {

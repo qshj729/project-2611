@@ -8,7 +8,7 @@ plugins {
 }
 
 android {
-    namespace = "com.hubdeck.benchmark"
+    namespace = "app.benchmark"
     compileSdk = 35
 
     defaultConfig {

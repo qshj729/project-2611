@@ -59,7 +59,7 @@ val effectiveKeyPassword = when {
 val effectiveAlias = if (hasCiSigning) keyAlias else localProps.getProperty("keyAlias")
 
 android {
-    namespace = "com.hubdeck.app"
+    namespace = "app"
     compileSdk = 35
 
     defaultConfig {

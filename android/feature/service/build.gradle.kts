@@ -1,7 +1,7 @@
 // :feature:service —— 服务详情 / 编辑（docs/design.md §7.2）
 //
 // 归属：roadmap §2 的 C 线（UI）。
-// 包名暂时保持 com.hubdeck.app.ui.service.*，待 C 线负责人搬迁时统一收敛。
+// 包名暂时保持 app.feature.service.*，待 C 线负责人搬迁时统一收敛。
 plugins {
     alias(libs.plugins.android.library)
     alias(libs.plugins.kotlin.android)
@@ -11,7 +11,7 @@ plugins {
 }
 
 android {
-    namespace = "com.hubdeck.feature.service"
+    namespace = "app.feature.service"
     compileSdk = 35
 
     defaultConfig {

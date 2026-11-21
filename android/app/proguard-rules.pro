@@ -1,9 +1,9 @@
 # Keep kotlinx.serialization generated serializers for our model classes.
 -keepattributes *Annotation*, InnerClasses
 -dontnote kotlinx.serialization.**
--keepclassmembers class com.hubdeck.app.** {
+-keepclassmembers class app.** {
     *** Companion;
 }
--keepclasseswithmembers class com.hubdeck.app.** {
+-keepclasseswithmembers class app.** {
     kotlinx.serialization.KSerializer serializer(...);
 }

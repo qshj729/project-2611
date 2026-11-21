@@ -8,7 +8,7 @@
           声明在库模块里，由 AGP 合并进宿主 App 的清单（不动 :app 的 AndroidManifest）。
         -->
         <receiver
-            android:name="com.hubdeck.app.ui.dashboard.widget.MyAppsWidgetProvider"
+            android:name="app.feature.dashboard.widget.MyAppsWidgetProvider"
             android:exported="true"
             android:label="@string/widget_label">
             <intent-filter>
@@ -22,13 +22,13 @@
 
         <!-- 绑定 Widget 列表数据的服务（Hilt 注入端口）。 -->
         <service
-            android:name="com.hubdeck.app.ui.dashboard.widget.WidgetRemoteViewsService"
+            android:name="app.feature.dashboard.widget.WidgetRemoteViewsService"
             android:exported="false"
             android:permission="android.permission.BIND_REMOTEVIEWS" />
 
         <!-- Widget 点击后拉起 Custom Tab 的中转 Activity。 -->
         <activity
-            android:name="com.hubdeck.app.ui.dashboard.widget.WidgetLaunchActivity"
+            android:name="app.feature.dashboard.widget.WidgetLaunchActivity"
             android:excludeFromRecents="true"
             android:exported="false"
             android:noHistory="true"

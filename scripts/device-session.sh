@@ -12,13 +12,13 @@
 #   scripts/device-session.sh info                # 只打印设备信息
 #   scripts/device-session.sh create [标签]       # 通道 B：新建云模拟器实例
 #   scripts/device-session.sh install [apk]       # 安装 APK（默认 debug APK）
-#   scripts/device-session.sh launch [包名]       # 启动应用（默认 com.hubdeck.app.debug）
+#   scripts/device-session.sh launch [包名]       # 启动应用（默认 top.quup.myapps.debug）
 #   scripts/device-session.sh shot [输出.png]     # 截图
 #   scripts/device-session.sh element-tree        # 通道 B：打印 UI 元素树
 #   scripts/device-session.sh logcat [行数]        # 抓最近日志
 #
 # 环境变量:
-#   HUB_DECK_PACKAGE     应用包名，默认 com.hubdeck.app.debug
+#   HUB_DECK_PACKAGE     应用包名，默认 top.quup.myapps.debug
 #   HUB_DECK_APK         APK 路径，默认 android/app/build/outputs/apk/debug/app-debug.apk
 #   HUB_DECK_DEVICE_ID   通道 B 的实例 id（android_<region>_<ulid>），不设则自动取最近一个
 #
@@ -31,7 +31,7 @@ REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 # shellcheck source=scripts/hubdeck-env.sh
 source "$REPO_ROOT/scripts/hubdeck-env.sh"
 
-APP_PACKAGE="${HUB_DECK_PACKAGE:-com.hubdeck.app.debug}"
+APP_PACKAGE="${HUB_DECK_PACKAGE:-top.quup.myapps.debug}"
 DEFAULT_APK="$REPO_ROOT/android/app/build/outputs/apk/debug/app-debug.apk"
 CHANNEL="none"
 SERIAL=""

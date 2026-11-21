@@ -1,7 +1,7 @@
 // :core:network —— OkHttp 客户端 / 探测器（docs/design.md §7.2）
 //
 // 归属：roadmap §2 的 B 线（Tailscale 与网络）。
-// 包名暂时保持 com.hubdeck.app.core.network.*，待 B 线负责人搬迁时统一收敛。
+// 包名暂时保持 app.core.network.*，待 B 线负责人搬迁时统一收敛。
 plugins {
     alias(libs.plugins.android.library)
     alias(libs.plugins.kotlin.android)
@@ -9,7 +9,7 @@ plugins {
 }
 
 android {
-    namespace = "com.hubdeck.core.network"
+    namespace = "app.core.network"
     compileSdk = 35
 
     defaultConfig {
