@@ -7,6 +7,7 @@ import app.core.data.db.ServiceDao
 import app.core.data.db.ServiceEntity
 import app.core.data.db.EndpointEntity
 import app.core.data.db.ServiceTagEntity
+import app.core.data.db.TagDao
 import app.core.data.db.toDomain
 import app.core.model.Category
 import app.core.model.Endpoint

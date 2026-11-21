@@ -8,9 +8,9 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
-import app.ui.browser.BrowserRoute
-import app.ui.dashboard.DashboardRoute
-import app.ui.service.ServiceDetailRoute
+import app.feature.browser.BrowserRoute
+import app.feature.dashboard.DashboardRoute
+import app.feature.service.ServiceDetailRoute
 import app.feature.settings.SettingsScreen
 import app.feature.tailscale.TailscaleScreen
 

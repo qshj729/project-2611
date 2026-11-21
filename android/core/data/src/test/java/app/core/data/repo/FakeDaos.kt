@@ -178,7 +178,7 @@ class FakeHealthDao : HealthDao {
 
 class FakeTagDao : TagDao {
     private val state = MutableStateFlow<List<TagEntity>>(emptyList())
-    private val links = mutableListOf<ServiceTagEntity>()
+    val links = mutableListOf<ServiceTagEntity>()
 
     var observeError: Throwable? = null
 

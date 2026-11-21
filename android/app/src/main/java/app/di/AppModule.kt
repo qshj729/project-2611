@@ -8,6 +8,7 @@ import app.core.data.db.EndpointDao
 import app.core.data.db.HealthDao
 import app.core.data.db.HubDeckDatabase
 import app.core.data.db.ServiceDao
+import app.core.data.db.TagDao
 import app.core.data.settings.SettingsStore
 import app.core.data.settings.SettingsStores
 import app.core.network.DefaultServiceProbe
@@ -56,6 +57,9 @@ object AppModule {
 
     @Provides
     fun provideCategoryDao(db: HubDeckDatabase): CategoryDao = db.categoryDao()
+
+    @Provides
+    fun provideTagDao(db: HubDeckDatabase): TagDao = db.tagDao()
 
     @Provides
     fun provideHealthDao(db: HubDeckDatabase): HealthDao = db.healthDao()

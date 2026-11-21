@@ -6,18 +6,18 @@ import app.core.tailscale.EndpointResolver
 import app.core.tailscale.EndpointUrlRenderer
 import app.core.tailscale.NetworkContextResolver
 import app.core.tailscale.TailnetRepository
-import app.ui.dashboard.port.EndpointResolverPort as DashboardEndpointResolverPort
-import app.ui.dashboard.port.HealthProbe as DashboardHealthProbe
-import app.ui.dashboard.port.NetworkContextPort as DashboardNetworkContextPort
-import app.ui.dashboard.port.ServiceCatalog
-import app.ui.dashboard.port.TailnetPort as DashboardTailnetPort
-import app.ui.dashboard.port.UrlRendererPort as DashboardUrlRendererPort
-import app.ui.service.port.EndpointResolverPort as ServiceEndpointResolverPort
-import app.ui.service.port.HealthProbe as ServiceHealthProbe
-import app.ui.service.port.NetworkContextPort as ServiceNetworkContextPort
-import app.ui.service.port.ServiceStore
-import app.ui.service.port.TailnetPort as ServiceTailnetPort
-import app.ui.service.port.UrlRendererPort as ServiceUrlRendererPort
+import app.feature.dashboard.port.EndpointResolverPort as DashboardEndpointResolverPort
+import app.feature.dashboard.port.HealthProbe as DashboardHealthProbe
+import app.feature.dashboard.port.NetworkContextPort as DashboardNetworkContextPort
+import app.feature.dashboard.port.ServiceCatalog
+import app.feature.dashboard.port.TailnetPort as DashboardTailnetPort
+import app.feature.dashboard.port.UrlRendererPort as DashboardUrlRendererPort
+import app.feature.service.port.EndpointResolverPort as ServiceEndpointResolverPort
+import app.feature.service.port.HealthProbe as ServiceHealthProbe
+import app.feature.service.port.NetworkContextPort as ServiceNetworkContextPort
+import app.feature.service.port.ServiceStore
+import app.feature.service.port.TailnetPort as ServiceTailnetPort
+import app.feature.service.port.UrlRendererPort as ServiceUrlRendererPort
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
