@@ -100,11 +100,12 @@ jobs:
           emulator-options: >-
             -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim
             -memory 3072 -cores 2 -no-passive-gps
-          script: scripts/ci-emulator-probe.sh
-
-      - name: 跑 Compose UI 测试（connectedAndroidTest）
-        working-directory: android
-        run: ./gradlew connectedDebugAndroidTest --max-workers=1
+          # 必须在 emulator-runner 的 script 内部跑：它会在 script 结束后关掉模拟器，
+          # 放到工作流的后续步骤里会直接 "No connected devices!"（2026-11-21 实测）。
+          # 先取证（截图 / UI 树 / logcat），再跑 UI 测试——取证是门禁，UI 测试慢且易超时。
+          script: |
+            scripts/ci-emulator-probe.sh
+            cd android && ./gradlew connectedDebugAndroidTest --max-workers=1
 
       - name: 收集截图 / UI 树 / logcat
         if: always()
