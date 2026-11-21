@@ -37,6 +37,12 @@ jobs:
     # 冷启动 ~7 分钟 + install ~4 分钟 + 等焦点数分钟，45 分钟不够用
     timeout-minutes: 75
 
+    env:
+      # emulator 检测到 -accel off 且无硬件加速时会直接拒绝启动，
+      # 必须显式同意降级到 TCG 纯软件模拟，否则模拟器根本起不来
+      # （表现为 adb: device 'emulator-5554' not found）
+      ANDROID_I_WANT_MY_TCG: 'yes'
+
     defaults:
       run:
         working-directory: android
