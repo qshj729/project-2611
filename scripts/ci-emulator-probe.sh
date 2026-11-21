@@ -69,8 +69,12 @@ dismiss_dialogs() {
 }
 
 current_focus() {
+  # dumpsys window 会按 display 输出多行 mCurrentFocus，未激活的 display 对应
+  # "mCurrentFocus=null"。只取 head -1 会命中那个 null 行而漏掉真正的焦点行
+  # （2026-11-21 实测：焦点明明落在 top.quup.myapps.debug/app.MainActivity，
+  #  但 head -1 取到 null 行 → 误判成「没拿到焦点」，白等 10 分钟后判红）。
   adb shell dumpsys window 2>/dev/null \
-    | grep -E "mCurrentFocus" | tr -d '\r' | head -1
+    | grep -E "mCurrentFocus" | tr -d '\r' | grep -v '^[[:space:]]*$' | awk '!seen[$0]++'
 }
 
 # 焦点判定：mCurrentFocus=null 是「窗口系统还没起来」，不是「已经有焦点」。
@@ -81,10 +85,9 @@ current_focus() {
 focus_ready() {
   local focus="$1"
   [ -n "$focus" ] || return 1
-  case "$focus" in
-    *mCurrentFocus=null*) return 1 ;;
-    *mCurrentFocus=null\ *|*"=null"*) return 1 ;;
-  esac
+  # 只要有一行非 null 的 mCurrentFocus 就算窗口系统就绪
+  # （多 display 场景下 null 行与真实焦点行会同时出现）
+  printf '%s\n' "$focus" | grep -v "mCurrentFocus=null" | grep -q "mCurrentFocus" || return 1
   return 0
 }
 
@@ -166,7 +169,7 @@ wait_for_focus() {
     current_focus >"$EVIDENCE_DIR/focus.txt"
     if grep -q "$PACKAGE" "$EVIDENCE_DIR/focus.txt" 2>/dev/null; then
       adb shell dumpsys window 2>/dev/null \
-        | grep -E "mCurrentFocus|mFocusedApp" | tr -d '\r' | head -3 >"$EVIDENCE_DIR/focus.txt"
+        | grep -E "mCurrentFocus|mFocusedApp" | tr -d '\r' | head -6 >"$EVIDENCE_DIR/focus.txt"
       return 0
     fi
     # 系统弹窗占住前台时按掉它
@@ -176,7 +179,7 @@ wait_for_focus() {
     sleep 3
   done
   adb shell dumpsys window 2>/dev/null \
-    | grep -E "mCurrentFocus|mFocusedApp" | tr -d '\r' | head -3 >"$EVIDENCE_DIR/focus.txt"
+    | grep -E "mCurrentFocus|mFocusedApp" | tr -d '\r' | head -6 >"$EVIDENCE_DIR/focus.txt"
   return 1
 }
 
@@ -205,7 +208,7 @@ collect_evidence() {
 
   # 当前前台 Activity（复核用）
   adb shell dumpsys activity activities 2>/dev/null \
-    | grep -E "mResumedActivity|mCurrentFocus" | tr -d '\r' | head -3 \
+    | grep -E "mResumedActivity|mCurrentFocus" | tr -d '\r' | head -6 \
     >"$EVIDENCE_DIR/resumed.txt" || true
 
   # logcat

@@ -39,6 +39,11 @@ case "$args" in
   "shell dumpsys window"*)
     case "$scenario" in
       focus_null) echo "  mCurrentFocus=null" ;;
+      # 多 display：未激活的 display 先输出 null 行，真正的焦点行在后面
+      focus_multi_display)
+        echo "  mCurrentFocus=null"
+        echo "  mCurrentFocus=Window{47d320e u0 top.quup.myapps.debug/app.MainActivity}"
+        ;;
       *) echo "  mCurrentFocus=Window{9f1b2c u0 top.quup.myapps.debug/app.MainActivity}" ;;
     esac
     echo "  mFocusedApp=ActivityRecord{748298a u0 top.quup.myapps.debug/.MainActivity t7}"
@@ -146,6 +151,18 @@ if grep -rq "结论: ✅" "$WORK/s2/evidence/summary.txt" "$WORK/s3/evidence/sum
   bad "判红场景里出现了「结论: ✅」（假绿）"
 else
   ok "判红场景均未出现「结论: ✅」（无假绿）"
+fi
+
+# --- 场景 6：多 display 输出（null 行在前）→ 焦点确实在我们包里，必须绿 -----
+# 2026-11-21 CI 实测踩到：dumpsys window 先输出未激活 display 的
+# "mCurrentFocus=null"，真正的焦点行在后面。旧逻辑 head -1 取到 null 行，
+# 误判「没拿到焦点」→ 白等 10 分钟后判红，而实际焦点一直在我们包里。
+rc="$(run_probe focus_multi_display "$WORK/s6")"
+if [ "$rc" = "0" ] && grep -q "结论: ✅" "$WORK/s6/evidence/summary.txt"; then
+  ok "场景 6：多 display 焦点（null 行在前）→ 绿"
+else
+  bad "场景 6：焦点行在 null 行之后时应判绿，实际 exit=$rc"
+  tail -5 "$WORK/s6/stdout.txt" 2>/dev/null
 fi
 
 printf '\n自检结果：通过 %s 项，失败 %s 项\n' "$PASS" "$FAIL"
