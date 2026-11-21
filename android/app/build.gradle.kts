@@ -86,6 +86,7 @@ android {
 
     buildTypes {
         debug {
+            applicationIdSuffix = ".debug"
             if (useSigning) {
                 signingConfig = signingConfigs.getByName("myapps")
             }
