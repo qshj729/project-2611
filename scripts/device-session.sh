@@ -28,8 +28,11 @@
 set -uo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-# shellcheck source=scripts/hubdeck-env.sh
-source "$REPO_ROOT/scripts/hubdeck-env.sh"
+# 本脚本只要 adb（真机 / 模拟器都走 adb），不需要 JDK / SDK；
+# 用可选模式加载构建环境，避免被「本地编译已下线」的硬拦截挡住。
+# 加载后关掉 set -e（env.sh 里的 set -euo 会改变本脚本的退出语义）。
+HUB_DECK_ENV_OPTIONAL=1 source "$REPO_ROOT/scripts/hubdeck-env.sh" || true
+set +e
 
 APP_PACKAGE="${HUB_DECK_PACKAGE:-top.quup.myapps.debug}"
 DEFAULT_APK="$REPO_ROOT/android/app/build/outputs/apk/debug/app-debug.apk"
@@ -67,7 +70,10 @@ detect_channel() {
 
   if command -v adb >/dev/null 2>&1; then
     adb start-server >/dev/null 2>&1 || true
+    # 2026-11-21：通道 A（真机）是主设备通道，通道 D（本地 AVD）已下线。
+    # 若真机与模拟器同时在线，优先挑真机（序列号不以 emulator- 开头的）。
     local line serial state
+    local emu_serial="" emu_state=""
     while IFS= read -r line; do
       case "$line" in
         "List of devices"*) continue ;;
@@ -75,15 +81,26 @@ detect_channel() {
       esac
       serial="$(printf '%s' "$line" | awk '{print $1}')"
       state="$(printf '%s' "$line" | awk '{print $2}')"
-      if [ "$state" = "device" ]; then
-        CHANNEL="adb"
-        SERIAL="$serial"
-        case "$serial" in
-          emulator-*) IS_EMULATOR="yes" ;;
-        esac
-        return 0
-      fi
+      [ "$state" = "device" ] || continue
+      case "$serial" in
+        emulator-*)
+          [ -n "$emu_serial" ] || { emu_serial="$serial"; emu_state="$state"; }
+          continue
+          ;;
+      esac
+      CHANNEL="adb"
+      SERIAL="$serial"
+      IS_EMULATOR="no"
+      return 0
     done <<< "$(adb devices 2>/dev/null)"
+
+    # 没有真机，退而求其次用模拟器
+    if [ -n "$emu_serial" ]; then
+      CHANNEL="adb"
+      SERIAL="$emu_serial"
+      IS_EMULATOR="yes"
+      return 0
+    fi
   fi
 
   local lim
@@ -101,9 +118,9 @@ detect_channel() {
 
 no_channel_hint() {
   warn "当前没有可用设备通道。"
-  warn "  通道 D（本地模拟器）：emulator -avd hubdeck_api34 -no-window -no-audio 启动已建好的 AVD（需 /dev/kvm 权限，或 ANDROID_I_WANT_MY_TCG=yes -accel off 软模拟）。"
-  warn "  通道 A（真机）：把开启「USB 调试 / 无线调试」的设备接到本机，adb devices 能看到 device 状态。"
+  warn "  通道 A（真机，主通道）：把开启「USB 调试 / 无线调试」的设备接到本机，adb devices 能看到 device 状态。"
   warn "  通道 B（云模拟器）：lim login --api-key <key> 或 export LIM_API_KEY=<key>，然后 lim android create。"
+  warn "  通道 D（本地 AVD）已于 2026-11-13 下线；通道 E（Actions 模拟器）已降为手动备用。"
   warn "详见 docs/device-test-channel.md。"
   exit 3
 }
