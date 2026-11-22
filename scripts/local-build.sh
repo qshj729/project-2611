@@ -2,15 +2,25 @@
 # HubDeck 本地编译检查入口。
 #
 # 定位（2026-11-18 老板决策：本地要尽量检查好，再提交）：
-#   本地只做「提交前自检」——编译 + 单测 + Lint；
-#   交付物（APK）仍由 GitHub Actions 出（scripts/build.sh），本地不出 APK。
-#   原因见 docs/ci-only-policy.md §2.5：本机只有 5.8GB 内存，gradle.properties 封了
-#   1g 堆，:app:mergeExtDexDebug 会被 R8 OOM；CI runner 上是 2g 堆，不会。
+#   本地做「提交前自检」——编译 + 单测 + Lint，并顺带产出 debug APK，
+#   供真机（通道 A）直接安装验证，省掉「CI 构建 → 下载 artifact」这一轮。
+#
+#   为什么 debug APK 可以在本机打（2026-11-21 实测推翻旧结论）：
+#     debug 不跑 R8，打包成本仅 38 秒（dex + 资源合并 + 组装 + 签名），
+#     相对「编译 + 单测 + Lint」总共 2 分 55 秒只多 20%。
+#     旧注释说「:app:mergeExtDexDebug 会被 R8 OOM」——实际 debug 根本不走 R8。
+#
+#   但 release 必须交 CI（本机打不了，实测数据）：
+#     本机 5.8GB 内存 / 2 核 / gradle 堆封 1g，release 的 R8 全程序分析
+#     需要撑爆堆 → 频繁 full GC，实测 BUILD SUCCESSFUL in 7h 3m 4s。
+#     CI runner 是 2g 堆 + 更快的 CPU，release 十几分钟出得来。
+#     release APK 由 .github/workflows/apk.yml 产出。
 #
 # 用法:
-#   scripts/local-build.sh                     # 默认：编译 + 单测 + Lint（推荐）
-#   scripts/local-build.sh compileDebugKotlin  # 自定义 gradle 任务
-#   scripts/local-build.sh --assemble         # 额外尝试打 debug APK（本机可能 OOM）
+#   scripts/local-build.sh                     # 默认：编译 + 单测 + Lint + debug APK（推荐）
+#   scripts/local-build.sh --no-apk            # 只编译 + 单测 + Lint（不想出包时快 40 秒）
+#   scripts/local-build.sh --release           # 额外打 release（⚠ 本机要跑几小时，别在 CI 前用）
+#   scripts/local-build.sh <gradle 任务>...     # 自定义任务
 #
 # 退出码即 gradle 退出码；失败时先看日志再推远端，别让 CI 去发现同样的错。
 
@@ -24,6 +34,7 @@ HOME="${HOME:-/home/jack}"
 export HOME
 
 log() { printf '→ %s\n' "$*"; }
+warn() { printf '! %s\n' "$*" >&2; }
 die() { printf '✗ %s\n' "$*" >&2; exit 1; }
 
 # ---------------------------------------------------------------------------
@@ -129,10 +140,13 @@ echo "→ 取得构建锁 $BUILD_LOCK"
 # 6. 跑任务
 # ---------------------------------------------------------------------------
 TASKS=()
-WITH_ASSEMBLE=0
+WITH_APK=1
+WITH_RELEASE=0
 for arg in "$@"; do
   case "$arg" in
-    --assemble) WITH_ASSEMBLE=1 ;;
+    --no-apk) WITH_APK=0 ;;
+    --release) WITH_RELEASE=1 ;;
+    --assemble) WITH_APK=1 ;;   # 兼容旧调用：等价于默认行为
     *) TASKS+=("$arg") ;;
   esac
 done
@@ -141,7 +155,13 @@ if [ "${#TASKS[@]}" -eq 0 ]; then
   # compileDebugKotlin / compileKotlin 覆盖全部模块的编译（含 :core:model 纯 Kotlin 模块）
   # testDebugUnitTest 用聚合写法（:app:testDebugUnitTest 是 NO-SOURCE，会假绿）
   TASKS=(compileDebugKotlin compileKotlin testDebugUnitTest :app:lintDebug)
-  [ "$WITH_ASSEMBLE" = "1" ] && TASKS+=(:app:assembleDebug)
+  # debug APK：本地打得起（38 秒），供真机直接装
+  [ "$WITH_APK" = "1" ] && TASKS+=(:app:assembleDebug)
+  # release：R8 在本机要跑几小时，默认不做
+  if [ "$WITH_RELEASE" = "1" ]; then
+    warn "release 的 R8 在本机实测要 7 小时（1g 堆 / 2 核），仅在明确需要时才用"
+    TASKS+=(:app:assembleRelease)
+  fi
 fi
 
 LOG_FILE="$LOG_DIR/local-build-$(date +%Y%m%d-%H%M%S).log"
@@ -157,6 +177,13 @@ STATUS=${PIPESTATUS[0]}
 
 if [ "$STATUS" -eq 0 ]; then
   log "本地检查通过：$LOG_FILE"
+  if printf '%s\n' "${TASKS[@]}" | grep -qx ":app:assembleDebug"; then
+    APK="$REPO_ROOT/android/app/build/outputs/apk/debug/app-debug.apk"
+    if [ -f "$APK" ]; then
+      log "debug APK 已就绪（可直接装真机）：$APK"
+      log "  安装：scripts/device-session.sh install"
+    fi
+  fi
 else
   printf '✗ 本地检查失败（exit %s）：%s\n' "$STATUS" "$LOG_FILE" >&2
   printf '  先在这里修好再推远端，别把同样的错留给 CI 发现。\n' >&2
