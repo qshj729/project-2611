@@ -5,26 +5,22 @@ package app.feature.settings
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
-import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.foundation.clickable
 import androidx.compose.material.icons.Icons
-import androidx.compose.ui.semantics.semantics
-import androidx.compose.material3.AlertDialog
+import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Checkbox
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -32,14 +28,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Slider
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
-import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.Clear
-import androidx.compose.material.icons.filled.ExpandLess
-import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -48,44 +40,38 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import kotlin.math.roundToInt
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
-import app.core.data.settings.CardDensityPreference
-import app.core.data.settings.HubDeckSettings
-import app.core.data.settings.NetworkModeLock
+import app.core.data.config.InternalServicesConfig
+import app.core.data.config.InternalServicesStore
+import app.core.data.settings.AppSettings
 import app.core.data.settings.SettingsStore
 import app.core.data.settings.ThemePreference
-import app.core.data.importer.HomarrImporter
-import app.core.data.importer.HubDeckYaml
-import app.core.data.repo.ServiceRepository
+import app.core.model.SecretStore
+import app.core.model.TunnelState
 import app.core.tunnel.TunnelManager
-import app.core.tunnel.TunnelProvider
-import app.core.tunnel.TunnelState
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.firstOrNull
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
-    private val repository: ServiceRepository,
     private val settingsStore: SettingsStore,
+    private val servicesStore: InternalServicesStore,
+    private val secretStore: SecretStore,
     private val tunnelManager: TunnelManager,
     @ApplicationContext private val context: Context,
 ) : ViewModel() {
 
-    private val _settings = MutableStateFlow(HubDeckSettings())
-    val settings: StateFlow<HubDeckSettings> = _settings
+    private val _settings = MutableStateFlow(AppSettings())
+    val settings: StateFlow<AppSettings> = _settings
 
     private val _exportedYaml = MutableStateFlow<String?>(null)
     val exportedYaml: StateFlow<String?> = _exportedYaml
@@ -103,39 +89,32 @@ class SettingsViewModel @Inject constructor(
 
     private fun observeSettings() {
         viewModelScope.launch {
-            settingsStore.observe().collect { settings ->
-                _settings.value = settings
-            }
+            settingsStore.observe().collect { settings -> _settings.value = settings }
         }
     }
 
     private fun observeTunnelState() {
         viewModelScope.launch {
-            tunnelManager.tunnelState.collect { state ->
-                _tunnelState.value = state
-            }
+            tunnelManager.tunnelState.collect { state -> _tunnelState.value = state }
         }
     }
 
-    fun export() {
+    fun exportServices() {
         viewModelScope.launch {
-            val services = repository.observeServices().firstOrNull() ?: emptyList()
-            val currentSettings = settings.value
-            _exportedYaml.value = HubDeckYaml.export(
-                services = services,
-                magicDnsSuffix = currentSettings.magicDnsSuffix,
-                homeSsid = currentSettings.homeSsid,
-            )
+            _exportedYaml.value = servicesStore.exportYaml()
         }
     }
 
-    fun importHomarr(yaml: String) {
+    fun importServices(yaml: String) {
         viewModelScope.launch {
-            runCatching { HomarrImporter.parse(yaml) }
+            runCatching { InternalServicesConfig.parse(yaml) }
                 .onSuccess { result ->
-                    result.services.forEach { repository.upsert(it) }
-                    _importSummary.value = "已导入 ${result.services.size} 个服务" +
-                        if (result.warnings.isEmpty()) "" else "；${result.warnings.size} 条提示"
+                    servicesStore.replaceAll(result.services)
+                    _importSummary.value = if (result.rejected.isEmpty()) {
+                        "已导入 ${result.services.size} 个服务"
+                    } else {
+                        "导入 ${result.services.size} 个；拒绝 ${result.rejected.size} 个（标题为空 / 非 http(s) 地址）"
+                    }
                 }
                 .onFailure { error ->
                     _importSummary.value = "导入失败：${error.message ?: "无法解析 YAML"}"
@@ -145,16 +124,16 @@ class SettingsViewModel @Inject constructor(
 
     fun startTunnelAuthorization() {
         viewModelScope.launch {
-            val authUrl = tunnelManager.authUrl.firstOrNull()
-            authUrl?.let { url ->
-                openInBrowser(url)
-            }
+            val authUrl = tunnelManager.authUrl.first()
+            if (!authUrl.isNullOrBlank()) openInBrowser(authUrl)
         }
     }
 
     fun clearAuthKey() {
-        TunnelProvider.clearAuthKey(context)
-        tunnelManager.stop()
+        viewModelScope.launch {
+            secretStore.clearAuthKey()
+            tunnelManager.stop()
+        }
     }
 
     private fun openInBrowser(url: String) {
@@ -163,32 +142,20 @@ class SettingsViewModel @Inject constructor(
         context.startActivity(intent)
     }
 
-    fun setHomeSsid(value: String?) {
-        viewModelScope.launch { settingsStore.setHomeSsid(value) }
-    }
-
-    fun setProbeIntervalMinutes(value: Int) {
-        viewModelScope.launch { settingsStore.setProbeIntervalMinutes(value) }
-    }
-
-    fun setProbeTimeoutMs(value: Int) {
-        viewModelScope.launch { settingsStore.setProbeTimeoutMs(value) }
-    }
-
-    fun setProbeWifiOnly(value: Boolean) {
-        viewModelScope.launch { settingsStore.setProbeWifiOnly(value) }
-    }
-
-    fun setNetworkModeLock(value: NetworkModeLock) {
-        viewModelScope.launch { settingsStore.setNetworkModeLock(value) }
-    }
-
     fun setThemePreference(value: ThemePreference) {
         viewModelScope.launch { settingsStore.setThemePreference(value) }
     }
 
-    fun setCardDensity(value: CardDensityPreference) {
-        viewModelScope.launch { settingsStore.setCardDensity(value) }
+    fun setAutoConnectTunnel(value: Boolean) {
+        viewModelScope.launch { settingsStore.setAutoConnectTunnel(value) }
+    }
+
+    fun setOpenHomeOnLaunch(value: Boolean) {
+        viewModelScope.launch { settingsStore.setOpenHomeOnLaunch(value) }
+    }
+
+    fun setUseTailnetProxy(value: Boolean) {
+        viewModelScope.launch { settingsStore.setUseTailnetProxy(value) }
     }
 
     fun openOpenSourceLicenses() {
@@ -198,7 +165,6 @@ class SettingsViewModel @Inject constructor(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
     onBack: () -> Unit,
@@ -208,20 +174,17 @@ fun SettingsScreen(
     val exported by viewModel.exportedYaml.collectAsStateWithLifecycle()
     val importSummary by viewModel.importSummary.collectAsStateWithLifecycle()
     val tunnelState by viewModel.tunnelState.collectAsStateWithLifecycle()
-    var homarrYaml by remember { mutableStateOf("") }
-    var homarrYamlExpanded by remember { mutableStateOf(false) }
-    var homeSsidText by remember { mutableStateOf(settings.homeSsid.orEmpty()) }
+
+    var servicesYaml by remember { mutableStateOf("") }
+    var servicesYamlExpanded by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
             TopAppBar(
                 title = { Text("设置") },
                 navigationIcon = {
-                    androidx.compose.material3.IconButton(onClick = onBack) {
-                        androidx.compose.material3.Icon(
-                            imageVector = Icons.Default.ArrowBack,
-                            contentDescription = "返回"
-                        )
+                    IconButton(onClick = onBack) {
+                        Icon(imageVector = Icons.Default.ArrowBack, contentDescription = "返回")
                     }
                 },
             )
@@ -235,46 +198,27 @@ fun SettingsScreen(
                 .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
-            // 1. 内网连接
             ConnectionCard(viewModel = viewModel, tunnelState = tunnelState)
 
-            // 2. 数据
-            DataCard(viewModel = viewModel, exported = exported)
-
-            // 3. 从 Homarr 导入
-            HomarrImportCard(
+            ServicesCard(
                 viewModel = viewModel,
-                homarrYaml = homarrYaml,
-                onHomarrYamlChange = { homarrYaml = it },
-                homarrYamlExpanded = homarrYamlExpanded,
-                onExpandedChange = { homarrYamlExpanded = it },
+                exported = exported,
                 importSummary = importSummary,
+                servicesYaml = servicesYaml,
+                onServicesYamlChange = { servicesYaml = it },
+                servicesYamlExpanded = servicesYamlExpanded,
+                onExpandedChange = { servicesYamlExpanded = it },
             )
 
-            // 4. 网络模式
-            NetworkModeCard(
-                viewModel = viewModel,
-                settings = settings,
-                homeSsidText = homeSsidText,
-                onHomeSsidTextChange = { homeSsidText = it }
-            )
+            TunnelSettingsCard(viewModel = viewModel, settings = settings)
 
-            // 5. 探测设置
-            ProbeSettingsCard(viewModel = viewModel, settings = settings)
-
-            // 6. 外观
             AppearanceCard(viewModel = viewModel, settings = settings)
 
-            // 7. 凭据管理
-            CredentialsCard(viewModel = viewModel)
-
-            // 8. 关于
             AboutCard(viewModel = viewModel)
         }
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun ConnectionCard(
     viewModel: SettingsViewModel,
@@ -284,9 +228,8 @@ private fun ConnectionCard(
         Column(modifier = Modifier.padding(16.dp).fillMaxWidth()) {
             Text("内网连接", style = MaterialTheme.typography.titleMedium)
             Text(
-                "通过 Tailscale 连接 tailnet 内网服务。无需配置端口转发或公网 IP。\n" +
-                    "授权方式：点击下方按钮，在浏览器中完成一次性授权即可。\n" +
-                    "注意：不支持 Auth Key 自动上线，只有浏览器授权这一条路。",
+                "通过内置 Tailscale 隧道访问 tailnet 内网服务，无需另装系统级 Tailscale App。\n" +
+                    "首次使用请点下方按钮，在浏览器中完成一次性授权。",
                 style = MaterialTheme.typography.bodySmall,
                 modifier = Modifier.padding(top = 8.dp).fillMaxWidth(),
             )
@@ -294,7 +237,7 @@ private fun ConnectionCard(
             when (tunnelState) {
                 is TunnelState.Connected -> {
                     Text(
-                        "状态：已连接 (${tunnelState.nodeName})",
+                        "状态：已连接（${tunnelState.nodeName}）",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.padding(top = 8.dp).fillMaxWidth(),
@@ -312,18 +255,13 @@ private fun ConnectionCard(
                         }
                     }
                 }
+
                 is TunnelState.Authorizing -> {
                     Text(
-                        "状态：等待授权中...",
+                        "状态：等待授权…",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.tertiary,
                         modifier = Modifier.padding(top = 8.dp).fillMaxWidth(),
-                    )
-                    Text(
-                        "请在浏览器中完成授权，授权完成后将自动连接。",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(top = 4.dp).fillMaxWidth(),
                     )
                     Row(modifier = Modifier.padding(top = 12.dp).fillMaxWidth()) {
                         Button(onClick = { viewModel.startTunnelAuthorization() }) {
@@ -331,14 +269,16 @@ private fun ConnectionCard(
                         }
                     }
                 }
+
                 is TunnelState.Starting -> {
                     Text(
-                        "状态：正在连接...",
+                        "状态：正在连接…",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(top = 8.dp).fillMaxWidth(),
                     )
                 }
+
                 is TunnelState.Error -> {
                     Text(
                         "状态：连接失败 - ${tunnelState.reason}",
@@ -354,14 +294,15 @@ private fun ConnectionCard(
                             onClick = { viewModel.clearAuthKey() },
                             colors = androidx.compose.material3.ButtonDefaults.buttonColors(
                                 containerColor = MaterialTheme.colorScheme.errorContainer,
-                                contentColor = MaterialTheme.colorScheme.onErrorContainer
-                            )
+                                contentColor = MaterialTheme.colorScheme.onErrorContainer,
+                            ),
                         ) {
                             Text("清除凭据")
                         }
                     }
                 }
-                is TunnelState.Disconnected -> {
+
+                TunnelState.Disconnected -> {
                     Text(
                         "状态：未连接内网",
                         style = MaterialTheme.typography.bodyMedium,
@@ -369,7 +310,7 @@ private fun ConnectionCard(
                         modifier = Modifier.padding(top = 8.dp).fillMaxWidth(),
                     )
                     Text(
-                        "当前为公网直连模式，可正常访问公网服务。点击下方按钮开始授权以启用内网访问。",
+                        "当前为公网直连模式。完成授权后，内网地址才会经隧道访问。",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(top = 4.dp).fillMaxWidth(),
@@ -385,18 +326,32 @@ private fun ConnectionCard(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun DataCard(
+private fun ServicesCard(
     viewModel: SettingsViewModel,
     exported: String?,
+    importSummary: String?,
+    servicesYaml: String,
+    onServicesYamlChange: (String) -> Unit,
+    servicesYamlExpanded: Boolean,
+    onExpandedChange: (Boolean) -> Unit,
 ) {
     Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
         Column(modifier = Modifier.padding(16.dp)) {
-            Text("数据", style = MaterialTheme.typography.titleMedium)
-            Text("目录以 hubdeck.yaml 为准，可随时导出备份。")
-            Button(onClick = { viewModel.export() }, modifier = Modifier.padding(top = 8.dp)) {
-                Text("导出 hubdeck.yaml")
+            Text("内网服务清单", style = MaterialTheme.typography.titleMedium)
+            Text(
+                "以 YAML 形式存储，可导入导出；导航页直接读取这份文件渲染分组卡片。",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Row(modifier = Modifier.padding(top = 8.dp).fillMaxWidth()) {
+                Button(onClick = { viewModel.exportServices() }) {
+                    Text("导出")
+                }
+                Spacer(Modifier.width(8.dp))
+                Button(onClick = { onExpandedChange(true) }) {
+                    Text("导入")
+                }
             }
             exported?.let { yaml ->
                 Text(
@@ -405,204 +360,94 @@ private fun DataCard(
                     modifier = Modifier.padding(top = 8.dp).fillMaxWidth(),
                 )
             }
-        }
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun HomarrImportCard(
-    viewModel: SettingsViewModel,
-    homarrYaml: String,
-    onHomarrYamlChange: (String) -> Unit,
-    homarrYamlExpanded: Boolean,
-    onExpandedChange: (Boolean) -> Unit,
-    importSummary: String?,
-) {
-    Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 4.dp)
-                    .clickable { onExpandedChange(!homarrYamlExpanded) },
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text("从 Homarr 导入", style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
-                Icon(
-                    imageVector = if (homarrYamlExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
-                    contentDescription = if (homarrYamlExpanded) "收起" else "展开",
-                )
-            }
-
-            if (homarrYamlExpanded) {
+            if (servicesYamlExpanded) {
                 OutlinedTextField(
-                    value = homarrYaml,
-                    onValueChange = onHomarrYamlChange,
-                    label = { Text("粘贴 Homarr config.yaml") },
+                    value = servicesYaml,
+                    onValueChange = onServicesYamlChange,
+                    label = { Text("粘贴 services.yaml") },
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(top = 8.dp),
                 )
                 Button(
-                    onClick = { viewModel.importHomarr(homarrYaml) },
+                    onClick = { viewModel.importServices(servicesYaml) },
                     modifier = Modifier.padding(top = 8.dp),
                 ) {
-                    Text("导入")
-                }
-                importSummary?.let {
-                    Text(it, style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(top = 8.dp).fillMaxWidth())
+                    Text("确认导入")
                 }
             }
-        }
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun NetworkModeCard(
-    viewModel: SettingsViewModel,
-    settings: HubDeckSettings,
-    homeSsidText: String,
-    onHomeSsidTextChange: (String) -> Unit,
-) {
-    Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Text("网络模式", style = MaterialTheme.typography.titleMedium)
-            Text(
-                "家中 Wi-Fi 名称：用于判断「在家 / 在外」。未配置时依靠探测结果推断。",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-
-            OutlinedTextField(
-                value = homeSsidText,
-                onValueChange = { newText ->
-                    onHomeSsidTextChange(newText)
-                    viewModel.setHomeSsid(newText)
-                },
-                label = { Text("家中 Wi-Fi SSID") },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 8.dp),
-                trailingIcon = {
-                    if (homeSsidText.isNotBlank()) {
-                        IconButton(onClick = {
-                            onHomeSsidTextChange("")
-                            viewModel.setHomeSsid("")
-                        }) {
-                            Icon(
-                                imageVector = Icons.Default.Clear,
-                                contentDescription = "清除 SSID",
-                            )
-                        }
-                    }
-                },
-            )
-
-            Text("手动锁定网络模式", style = MaterialTheme.typography.labelLarge, modifier = Modifier.padding(top = 16.dp, bottom = 8.dp))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                NetworkModeLock.entries.forEach { mode ->
-                    val isSelected = settings.networkModeLock == mode
-                    androidx.compose.material3.RadioButton(
-                        selected = isSelected,
-                        onClick = { viewModel.setNetworkModeLock(mode) },
-                        modifier = Modifier.weight(1f, fill = true).semantics {
-                            contentDescription = "${mode.raw} ${if (isSelected) "已选中" else "未选中"}"
-                        },
-                    )
-                    androidx.compose.foundation.layout.Box(
-                        modifier = Modifier.weight(1f, fill = true)
-                    ) {
-                        Text(
-                            text = when (mode) {
-                                NetworkModeLock.AUTO -> "自动"
-                                NetworkModeLock.HOME -> "强制在家"
-                                NetworkModeLock.AWAY -> "强制在外"
-                            },
-                            style = MaterialTheme.typography.bodyMedium,
-                            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-                        )
-                    }
-                }
-            }
-        }
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun ProbeSettingsCard(
-    viewModel: SettingsViewModel,
-    settings: HubDeckSettings,
-) {
-    Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Text("探测设置", style = MaterialTheme.typography.titleMedium)
-            Text(
-                "配置周期性健康检查的行为。探测结果用于显示服务状态与网络模式判定。",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-
-            // 探测间隔
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 16.dp, bottom = 8.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text("探测间隔", style = MaterialTheme.typography.bodyMedium)
-                    Text("${settings.probeIntervalMinutes} 分钟", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-                androidx.compose.material3.Slider(
-                    value = settings.probeIntervalMinutes.toFloat(),
-                    onValueChange = { viewModel.setProbeIntervalMinutes(it.roundToInt()) },
-                    valueRange = 1f..(24 * 60).toFloat(),
-                    steps = (24 * 60 - 1),
-                    modifier = Modifier.weight(1f),
+            importSummary?.let {
+                Text(
+                    it,
+                    style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier.padding(top = 8.dp).fillMaxWidth(),
                 )
             }
+        }
+    }
+}
 
-            // 探测超时
+@Composable
+private fun TunnelSettingsCard(
+    viewModel: SettingsViewModel,
+    settings: AppSettings,
+) {
+    Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text("隧道设置", style = MaterialTheme.typography.titleMedium)
+
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(vertical = 8.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text("探测超时", style = MaterialTheme.typography.bodyMedium)
-                    Text("${settings.probeTimeoutMs} ms", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-                androidx.compose.material3.Slider(
-                    value = settings.probeTimeoutMs.toFloat(),
-                    onValueChange = { viewModel.setProbeTimeoutMs(it.roundToInt()) },
-                    valueRange = 500f..30000f,
-                    steps = 59,
-                    modifier = Modifier.weight(1f),
-                )
-            }
-
-            // 仅 Wi-Fi 探测
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 8.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text("仅在 Wi-Fi 下探测", style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
+                Text("启动时自动连接隧道", style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
                 Switch(
-                    checked = settings.probeWifiOnly,
-                    onCheckedChange = { viewModel.setProbeWifiOnly(it) },
+                    checked = settings.autoConnectTunnel,
+                    onCheckedChange = { viewModel.setAutoConnectTunnel(it) },
                 )
             }
             Text(
-                "开启后，周期探测仅在连接 Wi-Fi 且充电时运行，省电。手动点击「刷新」不受此限制。",
+                "开启后，App 启动时若检测到已保存的授权凭据，会自动尝试连接隧道。",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = 4.dp).fillMaxWidth(),
+            )
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text("启动时显示内网导航页", style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
+                Switch(
+                    checked = settings.openHomeOnLaunch,
+                    onCheckedChange = { viewModel.setOpenHomeOnLaunch(it) },
+                )
+            }
+            Text(
+                "关闭后直接进入浏览器页。",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = 4.dp).fillMaxWidth(),
+            )
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text("内网流量走隧道代理", style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
+                Switch(
+                    checked = settings.useTailnetProxy,
+                    onCheckedChange = { viewModel.setUseTailnetProxy(it) },
+                )
+            }
+            Text(
+                "关闭后所有流量直连，tailnet 目标将无法访问（除非系统另装 Tailscale App）。",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(top = 4.dp).fillMaxWidth(),
@@ -611,17 +456,14 @@ private fun ProbeSettingsCard(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun AppearanceCard(
     viewModel: SettingsViewModel,
-    settings: HubDeckSettings,
+    settings: AppSettings,
 ) {
     Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text("外观", style = MaterialTheme.typography.titleMedium)
-
-            // 主题偏好
             Text("主题", style = MaterialTheme.typography.labelLarge, modifier = Modifier.padding(top = 16.dp, bottom = 8.dp))
             Column(
                 modifier = Modifier.fillMaxWidth(),
@@ -632,15 +474,14 @@ private fun AppearanceCard(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clickable { viewModel.setThemePreference(theme) }
-                            .background(if (isSelected) MaterialTheme.colorScheme.secondaryContainer else androidx.compose.ui.graphics.Color.Transparent),
+                            .clickable { viewModel.setThemePreference(theme) },
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         RadioButton(
                             selected = isSelected,
                             onClick = { viewModel.setThemePreference(theme) },
                         )
-                        Spacer(modifier = Modifier.width(12.dp))
+                        Spacer(Modifier.width(12.dp))
                         Text(
                             text = when (theme) {
                                 ThemePreference.SYSTEM -> "跟随系统"
@@ -653,67 +494,10 @@ private fun AppearanceCard(
                     }
                 }
             }
-
-            // 卡片密度
-            Text("卡片密度", style = MaterialTheme.typography.labelLarge, modifier = Modifier.padding(top = 16.dp, bottom = 8.dp))
-            Column(
-                modifier = Modifier.fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                CardDensityPreference.entries.forEach { density ->
-                    val isSelected = settings.cardDensity == density
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { viewModel.setCardDensity(density) }
-                            .background(if (isSelected) MaterialTheme.colorScheme.secondaryContainer else androidx.compose.ui.graphics.Color.Transparent),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        RadioButton(
-                            selected = isSelected,
-                            onClick = { viewModel.setCardDensity(density) },
-                        )
-                        Spacer(modifier = Modifier.width(12.dp))
-                        Text(
-                            text = when (density) {
-                                CardDensityPreference.COMPACT -> "紧凑"
-                                CardDensityPreference.NORMAL -> "标准"
-                                CardDensityPreference.COMFORTABLE -> "舒适"
-                            },
-                            style = MaterialTheme.typography.bodyMedium,
-                            modifier = Modifier.weight(1f),
-                        )
-                    }
-                }
-            }
         }
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun CredentialsCard(
-    viewModel: SettingsViewModel,
-) {
-    Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Text("凭据管理", style = MaterialTheme.typography.titleMedium)
-            Text(
-                "本地加密存储的凭据（Local API secret、控制平面 token）。导出时默认不包含凭据。",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Text(
-                "凭据列表与管理界面将在后续版本提供。当前可通过 Tailscale 面板保存 Local API secret。",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(top = 8.dp).fillMaxWidth(),
-            )
-        }
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun AboutCard(
     viewModel: SettingsViewModel,
@@ -744,9 +528,7 @@ private fun AboutCard(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text("开源协议", style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
-                androidx.compose.material3.TextButton(
-                    onClick = { viewModel.openOpenSourceLicenses() },
-                ) {
+                TextButton(onClick = { viewModel.openOpenSourceLicenses() }) {
                     Text("Apache-2.0")
                 }
             }
@@ -758,13 +540,13 @@ private fun AboutCard(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text("源代码", style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
-                androidx.compose.material3.TextButton(
+                TextButton(
                     onClick = {
-                        val intent = android.content.Intent(
-                            android.content.Intent.ACTION_VIEW,
-                            android.net.Uri.parse("https://github.com/qshj729/hubdeck")
+                        val intent = Intent(
+                            Intent.ACTION_VIEW,
+                            Uri.parse("https://github.com/qshj729/hubdeck"),
                         )
-                        intent.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+                        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                         context.startActivity(intent)
                     },
                 ) {
@@ -773,7 +555,9 @@ private fun AboutCard(
             }
 
             Text(
-                "HubDeck —— 自托管服务聚合台。把散落的自建服务收进一个原生 Android 入口，并用 Tailscale 让它在任何网络下都能直达。",
+                "MyApps —— 自用的 Tailscale 套壳浏览器：一个 App 取代「浏览器 + Tailscale App」。" +
+                    "内置 GeckoView 引擎，书签 / 标签 / 下载 / 历史 / 无痕都由引擎提供；" +
+                    "内网地址经本地隧道代理（PAC）访问，公网直连。",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(top = 8.dp).fillMaxWidth(),

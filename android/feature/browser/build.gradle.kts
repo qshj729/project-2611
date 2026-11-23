@@ -1,12 +1,16 @@
-// :feature:browser —— 内嵌浏览器屏（docs/design.md §5.2、roadmap §25.7 T3）
+// :feature:browser —— GeckoView 浏览器底座
 //
-// 归属：roadmap §2 的 C 线（UI）。
+// 归属：界面线。
+// 底座选型（2026-11-22 决策）：GeckoView（Firefox 引擎）+ Mozilla 官方组件，
+// 而不是自己重写一个浏览器 —— 书签 / 标签 / 下载 / 历史 / 密码 由引擎提供。
+// App 只做：① 壳（地址栏 + 标签条）② 内网导航页入口 ③ 把 tailnet 流量接进隧道。
 plugins {
     alias(libs.plugins.android.library)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
-    alias(libs.plugins.hilt)
     alias(libs.plugins.ksp)
+    alias(libs.plugins.hilt)
+    
 }
 
 android {
@@ -14,7 +18,7 @@ android {
     compileSdk = 35
 
     defaultConfig {
-        minSdk = 26
+        minSdk = 34
     }
 
     buildFeatures {
@@ -26,32 +30,41 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
 
-    kotlinOptions {
-        jvmTarget = "17"
+    kotlin {
+        compilerOptions {
+            jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
+        }
+    }
+
+    packaging {
+        resources.excludes += setOf("/META-INF/{AL2.0,LGPL3.0}")
+    }
+
+    testOptions {
+        unitTests.isReturnDefaultValues = true
     }
 }
 
 dependencies {
     api(project(":core:model"))
     implementation(project(":core:data"))
-    implementation(project(":core:tailscale"))
+
+    implementation(libs.geckoview)
+    implementation(libs.compose.ui.text)
 
     implementation(platform(libs.compose.bom))
     implementation(libs.bundles.compose.runtime)
+    implementation(libs.compose.foundation)
     implementation(libs.bundles.feature.viewmodel)
     implementation(libs.bundles.feature.hilt)
     ksp(libs.hilt.compiler)
 
-    // WebView
-    implementation(libs.androidx.webkit)
-    implementation(libs.androidx.activity.compose)
-    implementation(libs.gson)
-
-    // 与 feature:dashboard 保持一致：ViewModel 用到 kotlinx.coroutines.flow
-    implementation(libs.kotlinx.coroutines.core)
-
     testImplementation(libs.junit)
-    testImplementation(libs.kotlinx.coroutines.test)
-    testImplementation(libs.mockito.kotlin)
-    testImplementation(libs.androidx.arch.core.testing)
+
+    androidTestImplementation(platform(libs.compose.bom))
+    androidTestImplementation(libs.compose.ui.test.junit4)
+    debugImplementation(libs.compose.ui.test.manifest)
+    androidTestImplementation(libs.androidx.activity.compose)
+    debugImplementation(libs.compose.ui.tooling)
+    debugImplementation(libs.compose.ui.tooling.preview)
 }

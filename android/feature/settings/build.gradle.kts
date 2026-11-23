@@ -1,13 +1,14 @@
-// :feature:settings —— 设置（docs/design.md §7.2）
+// :feature:settings —— 设置（内网连接、服务清单导入导出、隧道开关、主题）
 //
-// 归属：roadmap §2 的 C 线（UI）。
-// 包名暂时保持 app.feature.settings.*，待 C 线负责人搬迁时统一收敛。
+// 归属：界面线。
+// 依赖 :core:model / :core:data / :core:tunnel。
 plugins {
     alias(libs.plugins.android.library)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
-    alias(libs.plugins.hilt)
     alias(libs.plugins.ksp)
+    alias(libs.plugins.hilt)
+    
 }
 
 android {
@@ -15,7 +16,7 @@ android {
     compileSdk = 35
 
     defaultConfig {
-        minSdk = 26
+        minSdk = 34
     }
 
     buildFeatures {
@@ -27,15 +28,16 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
 
-    kotlinOptions {
-        jvmTarget = "17"
+    kotlin {
+        compilerOptions {
+            jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
+        }
     }
 }
 
 dependencies {
     api(project(":core:model"))
     implementation(project(":core:data"))
-    implementation(project(":core:tailscale"))
     implementation(project(":core:tunnel"))
 
     implementation(platform(libs.compose.bom))
@@ -47,7 +49,7 @@ dependencies {
 
     testImplementation(libs.junit)
 
-    // UI 测试（别名与 libs.versions.toml 对齐：compose-ui-test-*）
+    // UI 测试
     androidTestImplementation(platform(libs.compose.bom))
     androidTestImplementation(libs.compose.ui.test.junit4)
     debugImplementation(libs.compose.ui.test.manifest)

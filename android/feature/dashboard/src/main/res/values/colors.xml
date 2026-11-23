@@ -1,7 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<resources>
-    <!-- Widget 渲染在宿主（桌面）进程里，主题属性不可靠，这里用固定色值 + night 变体。 -->
-    <color name="widget_background">#FFF1F5F9</color>
-    <color name="widget_text_primary">#FF0F172A</color>
-    <color name="widget_text_secondary">#FF475569</color>
-</resources>

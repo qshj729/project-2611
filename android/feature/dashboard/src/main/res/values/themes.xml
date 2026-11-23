@@ -1,5 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<resources>
-    <!-- Widget 点击后的中转 Activity 用透明主题，用户看不到多余的界面。 -->
-    <style name="Theme.MyApps.Widget.Transparent" parent="@android:style/Theme.Translucent.NoTitleBar" />
-</resources>

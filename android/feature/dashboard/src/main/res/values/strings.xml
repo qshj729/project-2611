@@ -1,7 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<resources>
-    <string name="widget_label">MyApps 收藏</string>
-    <string name="widget_title">收藏服务</string>
-    <string name="widget_description">展示收藏的服务，点击直接在浏览器中打开</string>
-    <string name="widget_empty">还没有收藏的服务</string>
-</resources>
