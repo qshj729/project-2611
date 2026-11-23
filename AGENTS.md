@@ -61,7 +61,7 @@
 目标模块 `compileDebugKotlin` 必须有命中行（`NO-SOURCE` 也是绿的），按 `/home/jack/project-2611-docs/docs/incidents/2026-11-10-m1-hard-kill.md` §6 的 G1–G9 逐条给结论。
 
 ### 口径全文
-见 `/home/jack/project-2611-docs/docs/ci-only-policy.md`；设备通道见 `/home/jack/project-2611-docs/docs/device-test-channel.md` §4E。
+见 `/home/jack/project-2611-docs/docs/delivery.md`（交付口径 §1–§5；设备通道 §6）。
 
 ---
 
@@ -84,16 +84,13 @@
 /home/jack/project-2611-docs/docs/
 ```
 
-- `/home/jack/project-2611-docs/docs/design.md` — **设计正本**（**v2，2026-11-22**：产品形态 = Tailscale 套壳浏览器；ADR-201 ~ ADR-205；现状与遗留 §6）
-- `/home/jack/project-2611-docs/docs/contracts.md` — **冻结契约与模块归属**（**v2.0**：C-01 ~ C-09；已知缺口 §4；架构冲突 §9）
-- `/home/jack/project-2611-docs/docs/roadmap.md` — 里程碑与验收标准（M0 已完成，M1 = PAC 接线 + 浏览器能力）
-- `/home/jack/project-2611-docs/docs/tailscale-integration.md` — Tailscale 能力盘点与旧 ADR 台账（**历史参考**；ADR-001/006/007 已被反转，勿直接照用）
-- `/home/jack/project-2611-docs/docs/ci-only-policy.md` — 构建与验收口径
-- `/home/jack/project-2611-docs/docs/acceptance-template.md` — 验收模板
-- `/home/jack/project-2611-docs/docs/device-test-channel.md` — 设备通道手册
-- `/home/jack/project-2611-docs/docs/incidents/` — 事故复盘记录
+- `/home/jack/project-2611-docs/docs/design.md` — **设计正本**（v2：产品形态 = Tailscale 套壳浏览器；ADR-201 ~ ADR-205；现状与遗留 §6；Tailscale 要点与 V1–V7 附录 C）
+- `/home/jack/project-2611-docs/docs/contracts.md` — **冻结契约与模块归属**（v2.0：C-01 ~ C-09；已知缺口 §4；架构冲突 §9）
+- `/home/jack/project-2611-docs/docs/plan.md` — 里程碑、进度、风险、待拍板决策、验收证据规范
+- `/home/jack/project-2611-docs/docs/delivery.md` — 交付口径（本地自检 + Actions 证据）+ 设备通道手册 + 磁盘纪律
+- `/home/jack/project-2611-docs/docs/incidents/` — 事故复盘记录（G0–G9 门禁）
 - `/home/jack/project-2611-docs/` 根目录 — 任务级资料（PR 草稿、任务清单、抓取日志等，见 §4.4）
-- `/home/jack/project-2611-docs/archive-20261122/` — 2026-11-22 文档对齐前的原文快照（可追溯）
+- `/home/jack/project-2611-docs/archive-20261122/`、`archive-20261123/` — 历史快照（2026-11-22 对齐前 / 2026-11-23 四文档合并前），可追溯
 
 > 说明：源码注释与 `scripts/`、`.github/workflows/` 中出现的 `docs/X.md §N` 均指向上方项目文档区的同名文件，仓库内不再保留 `docs/` 目录。
 

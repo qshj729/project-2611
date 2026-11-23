@@ -14,13 +14,10 @@
 
 | 文档 | 内容 |
 | --- | --- |
-| [`design.md`](/home/jack/project-2611-docs/docs/design.md) | **主设计文档（v2）**：产品定位、架构决策（ADR）、瘦身后的模块结构、数据格式、现状与遗留、风险 |
-| [`contracts.md`](/home/jack/project-2611-docs/docs/contracts.md) | **冻结契约与模块归属（v2.0）**：C-01 ~ C-09、模块归属表、依赖方向、变更流程、已知缺口 |
-| [`roadmap.md`](/home/jack/project-2611-docs/docs/roadmap.md) | **路线图**：M0 ~ M4、当前进度快照、风险执行表、待拍板决策 |
-| [`tailscale-integration.md`](/home/jack/project-2611-docs/docs/tailscale-integration.md) | Tailscale 能力盘点与 ADR 台账（**ADR-001/006/007 已被实现期反转，勿直接照用**） |
-| [`ci-only-policy.md`](/home/jack/project-2611-docs/docs/ci-only-policy.md) | **交付口径**：本地自检 + 唯一交付证据 = GitHub Actions |
-| [`device-test-channel.md`](/home/jack/project-2611-docs/docs/device-test-channel.md) | 设备通道手册（真机 / 云模拟器 / CI 模拟器） |
-| [`acceptance-template.md`](/home/jack/project-2611-docs/docs/acceptance-template.md) | 验收模板 |
+| [`design.md`](/home/jack/project-2611-docs/docs/design.md) | **设计正本（v2）**：产品定位、ADR-201 ~ ADR-205、瘦身后的模块结构、数据格式、现状与遗留、风险、附录 C（Tailscale 要点 + 真机验证清单 V1–V7） |
+| [`contracts.md`](/home/jack/project-2611-docs/docs/contracts.md) | **冻结契约与模块归属（v2.0）**：C-01 ~ C-09、模块归属表、依赖方向、变更流程、已知缺口 G-1 ~ G-10 |
+| [`plan.md`](/home/jack/project-2611-docs/docs/plan.md) | **计划与验收**：M0 ~ M4 里程碑、当前进度、风险执行表、待拍板决策、验收证据规范 |
+| [`delivery.md`](/home/jack/project-2611-docs/docs/delivery.md) | **交付与设备验收**：本地自检 + Actions 证据口径、设备通道（真机 / Limrun / CI 模拟器）、磁盘纪律 |
 | [`incidents/`](/home/jack/project-2611-docs/docs/incidents/) | 事故复盘与 G0–G9 门禁 |
 
 ---
@@ -93,5 +90,5 @@ bash scripts/local-build.sh --no-apk # 跳过打包，快一些
 
 1. **M1-1.1**：把 PAC 接到 GeckoView（决定这个 App 到底能不能替代两个 App）。
 2. **M1-1.2**：用引擎能力补齐标签 / 书签 / 下载 / 历史 / 无痕（不自造浏览器）。
-3. 真机 + 真实 tailnet 走一遍通道 A 验收（`device-test-channel.md` §2）。
-4. M3：tsnet 依赖评估 + 包体 / 冷启动基准（`roadmap.md` §1 M3）。
+3. 真机 + 真实 tailnet 走一遍通道 A 验收（`delivery.md` §6.2 + `design.md` 附录 C.4 的 V1–V7）。
+4. M3：tsnet 依赖评估 + 包体 / 冷启动基准（`plan.md` §1 M3）。

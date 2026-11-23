@@ -23,7 +23,7 @@
 #      mFocusedApp=top.quup.myapps.debug 而 mCurrentFocus 是 systemui 的 ANR 弹窗），
 #      所以焦点判定只看 mCurrentFocus。
 #
-# 证据口径（见 docs/ci-only-policy.md）：
+# 证据口径（见 delivery.md §4）：
 #   - 截图 png = 界面存在且渲染完成
 #   - UI 树 xml = 可复核的语义结构（用于断言控件文案）
 #   - logcat = 崩溃 / ANR 现场
