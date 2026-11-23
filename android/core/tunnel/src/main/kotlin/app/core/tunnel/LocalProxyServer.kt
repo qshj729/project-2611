@@ -49,6 +49,12 @@ open class LocalProxyServer {
     // Thread pool for handling client connections
     private val executor = Executors.newFixedThreadPool(16) as ThreadPoolExecutor
 
+    /**
+     * 启动本地代理。
+     *
+     * @param node tsnet 节点；**允许为 null** —— 此时代理仍监听（PAC 始终可取），
+     *   但 tailnet 目标会返回 503（隧道未就绪），其余目标直连。
+     */
     open fun start(context: Context, node: TailnetNode?) {
         tailnetNode = node
         if (running) return
@@ -125,9 +131,15 @@ open class LocalProxyServer {
                 }
             }
 
-            when (method) {
-                "CONNECT" -> handleConnect(socket, target, outputStream)
-                "GET", "POST", "PUT", "DELETE", "HEAD", "OPTIONS", "PATCH" -> {
+            when {
+                // PAC 脚本：浏览器用它决定"哪些地址走隧道"。必须始终可取，
+                // 否则 Gecko 会拿不到代理配置而行为不可预期。
+                method == "GET" && target.substringBefore('?') == PacGenerator.PAC_PATH -> {
+                    sendPacResponse(outputStream)
+                }
+                method == "CONNECT" -> handleConnect(socket, target, outputStream)
+                method == "GET" || method == "POST" || method == "PUT" || method == "DELETE" ||
+                    method == "HEAD" || method == "OPTIONS" || method == "PATCH" -> {
                     handleHttpRequest(socket, method, target, hostHeader, inputStream, outputStream)
                 }
                 else -> {
@@ -458,6 +470,23 @@ open class LocalProxyServer {
     companion object {
         /** tsnet connect 超时（秒）。 */
         private const val TUNNEL_CONNECT_TIMEOUT_SECONDS = 10L
+    }
+
+    /** 返回 PAC 脚本（浏览器据此决定路由）。 */
+    private fun sendPacResponse(outputStream: java.io.OutputStream) {
+        val body = PacGenerator.build()
+        val header = buildString {
+            append("HTTP/1.1 200 OK\r\n")
+            append("Content-Type: application/x-ns-proxy-autoconfig\r\n")
+            append("Content-Length: ${body.toByteArray().size}\r\n")
+            append("Cache-Control: no-store\r\n")
+            append("Connection: close\r\n\r\n")
+        }
+        runCatching {
+            outputStream.write(header.toByteArray())
+            outputStream.write(body.toByteArray())
+            outputStream.flush()
+        }
     }
 
     private fun sendErrorResponse(

@@ -2,8 +2,8 @@ package app.core.tunnel
 
 import android.content.Context
 import android.util.Log
-import app.core.model.TailnetState
-import app.core.tailscale.TailnetRepository
+import app.core.model.SecretStore
+import app.core.model.TunnelState
 import com.klethron.tsnet.NodeStatus
 import com.klethron.tsnet.StateStore
 import com.klethron.tsnet.TailnetNode
@@ -22,23 +22,21 @@ import java.time.Duration
  *
  * This is the central piece that wires together:
  * 1. TailnetNode (tsnet) - establishes the tailnet connection
- * 2. LocalProxyServer - handles HTTP/CONNECT proxy traffic
- * 3. ProxyConfigurator - applies WebView proxy rules
- * 4. State subscription - exposes tunnel state to UI (T3 status bar, T4 auth entry)
+ * 2. LocalProxyServer - handles HTTP/CONNECT proxy traffic + serves the PAC script
+ * 3. State subscription - exposes tunnel state to UI (status bar, auth entry)
  *
  * Lifecycle (tsnet 0.14.0 real API):
  * - start() → TailnetNode.start(context, stateStore, authKey)
  * - awaitStatus(status, timeout) → NodeStatus
  * - NEEDS_LOGIN → node.login() → 轮询 awaitStatus 直到 loginUrl 出现 / 变成 RUNNING
- * - RUNNING → 启动 LocalProxyServer + 应用 WebView 代理规则
- * - 出错 / 掉线 → 回落到全 DIRECT（模式 C）
+ * - RUNNING → 启动 LocalProxyServer（浏览器通过 PAC 自动把 tailnet 目标转进隧道）
+ * - 出错 / 掉线 → 本地代理对 tailnet 目标返回 503，公网流量照常直连
  *
  * All public methods are safe to call from any thread; internal work runs on IO dispatcher.
  */
 class TunnelManager(
     private val context: Context,
-    private val tailnetRepository: TailnetRepository,
-    private val proxyConfigurator: ProxyConfigurator,
+    private val secretStore: SecretStore,
     private val localProxyServer: LocalProxyServer,
     private val scope: CoroutineScope,
     /**
@@ -82,13 +80,15 @@ class TunnelManager(
             Log.d(TAG, "Tunnel start already attempted, skipping")
             return
         }
-        val prefs = context.getSharedPreferences("hubdeck_prefs", Context.MODE_PRIVATE)
-        val savedKey = prefs.getString("tailscale_auth_key_saved", null)
-        if (savedKey != null && savedKey != "placeholder-key-no-env" && savedKey.isNotBlank()) {
-            start(savedKey)
-        } else {
-            Log.i(TAG, "No auth key saved, tunnel not started")
-            _tunnelState.value = TunnelState.Disconnected
+        scope.launch(Dispatchers.IO) {
+            val savedKey = secretStore.authKey()
+            if (!savedKey.isNullOrBlank()) {
+                Log.i(TAG, "Auth key found in Keystore, starting tunnel")
+                start(savedKey)
+            } else {
+                Log.i(TAG, "No auth key saved, tunnel not started")
+                _tunnelState.value = TunnelState.Disconnected
+            }
         }
     }
 
@@ -159,19 +159,8 @@ class TunnelManager(
                 magicDnsSuffix = magicDnsSuffix,
             )
 
-            // 启动本地代理（把尾网流量转到 tsnet 通道）
+            // 启动本地代理（把尾网流量转到 tsnet 通道；PAC 常驻，浏览器自动生效）
             localProxyServer.start(context, node)
-
-            // 给 WebView 应用代理规则
-            val tailnetState = TailnetState(
-                connected = true,
-                magicDnsSuffix = magicDnsSuffix,
-                tailnetName = extractTailnetName(addresses),
-                selfIps = tailnetIps,
-                backendState = "Running",
-                source = app.core.model.TailnetSource.LOCAL_API,
-            )
-            proxyConfigurator.apply(context, tailnetState)
 
             // 开始轮询节点健康
             startHealthMonitoring(node, status)
@@ -239,7 +228,6 @@ class TunnelManager(
         scope.launch(Dispatchers.Main) {
             _tunnelState.value = TunnelState.Error(reason = reason)
             _authUrl.value = null
-            proxyConfigurator.clearProxy(context)
             localProxyServer.stop()
             closeNode()
             lifecycleJob?.cancel()
@@ -279,7 +267,6 @@ class TunnelManager(
         lifecycleJob = null
         localProxyServer.stop()
         closeNode()
-        proxyConfigurator.clearProxy(context)
         _tunnelState.value = TunnelState.Disconnected
         _authUrl.value = null
         startAttempted = false
@@ -329,16 +316,6 @@ class TunnelManager(
             )
 
             localProxyServer.start(context, tailnetNode)
-
-            val tailnetState = TailnetState(
-                connected = true,
-                magicDnsSuffix = extractMagicDnsSuffix(addresses),
-                tailnetName = extractTailnetName(addresses),
-                selfIps = tailnetIps,
-                backendState = "Running",
-                source = app.core.model.TailnetSource.LOCAL_API,
-            )
-            proxyConfigurator.apply(context, tailnetState)
         }
     }
 
@@ -347,7 +324,6 @@ class TunnelManager(
         scope.launch(Dispatchers.Main) {
             _tunnelState.value = TunnelState.Error(reason = reason)
             _authUrl.value = null
-            proxyConfigurator.clearProxy(context)
             localProxyServer.stop()
             closeNode()
             lifecycleJob?.cancel()
@@ -362,10 +338,6 @@ class TunnelManager(
             val parts = fqdn.split(".")
             if (parts.size >= 3) parts.drop(1).joinToString(".") else null
         }
-    }
-
-    private fun extractTailnetName(addresses: List<String>): String? {
-        return extractMagicDnsSuffix(addresses)?.removeSuffix(".ts.net")
     }
 
     companion object {
