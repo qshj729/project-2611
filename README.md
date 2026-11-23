@@ -1,8 +1,10 @@
-# HubDeck · 自托管服务聚合台
+# MyApps · 自用的 Tailscale 套壳浏览器
 
-把散落的自托管服务收进一个原生 Android 入口，并借助 Tailscale 让这些服务在**任何网络下**（家里 / 公司 / 蜂窝 / 国外酒店）都能一键直达。
+给 [Firefox 引擎（GeckoView）](https://geckoview.dev/) **套上 Tailscale**：
+在外面访问家里的内网服务，不再需要同时开「浏览器」和「Tailscale App」两个应用。
 
-> 本仓库是 **CMP-1「设计一个安卓应用，把自行架设的服务和应用集中起来，相当于统一入口，同时要加上 tailscale 功能」** 的交付物。
+> 工作名 **MyApps**（`applicationId = top.quup.myapps`，源码根包 `app`）。
+> 设计期代号 HubDeck；工程标识（`hubdeck.yaml` 等）暂时沿用旧名，见 `contracts.md` G-6。
 
 ---
 
@@ -12,63 +14,84 @@
 
 | 文档 | 内容 |
 | --- | --- |
-| [`design.md`](/home/jack/project-2611-docs/docs/design.md) | **主设计文档**：问题与目标、竞品选型、功能清单、技术架构、数据模型、导入导出格式、安全模型、风险登记册 |
-| [`tailscale-integration.md`](/home/jack/project-2611-docs/docs/tailscale-integration.md) | **Tailscale 集成深潜**：能力盘点、五种接入方式对比、7 条 ADR、Android 平台限制与规避、真机验证清单 |
-| [`roadmap.md`](/home/jack/project-2611-docs/docs/roadmap.md) | **路线图**：M0–M5 里程碑与验收标准、任务拆分建议、KPI、风险执行表、待 CEO 拍板的决策项 |
-| [`android/`](android/) | **代码脚手架**：Gradle + Kotlin + Jetpack Compose 工程，含数据层、Tailscale 客户端、探测器、端点解析等核心实现 |
+| [`design.md`](/home/jack/project-2611-docs/docs/design.md) | **主设计文档（v2）**：产品定位、架构决策（ADR）、瘦身后的模块结构、数据格式、现状与遗留、风险 |
+| [`contracts.md`](/home/jack/project-2611-docs/docs/contracts.md) | **冻结契约与模块归属（v2.0）**：C-01 ~ C-09、模块归属表、依赖方向、变更流程、已知缺口 |
+| [`roadmap.md`](/home/jack/project-2611-docs/docs/roadmap.md) | **路线图**：M0 ~ M4、当前进度快照、风险执行表、待拍板决策 |
+| [`tailscale-integration.md`](/home/jack/project-2611-docs/docs/tailscale-integration.md) | Tailscale 能力盘点与 ADR 台账（**ADR-001/006/007 已被实现期反转，勿直接照用**） |
+| [`ci-only-policy.md`](/home/jack/project-2611-docs/docs/ci-only-policy.md) | **交付口径**：本地自检 + 唯一交付证据 = GitHub Actions |
+| [`device-test-channel.md`](/home/jack/project-2611-docs/docs/device-test-channel.md) | 设备通道手册（真机 / 云模拟器 / CI 模拟器） |
+| [`acceptance-template.md`](/home/jack/project-2611-docs/docs/acceptance-template.md) | 验收模板 |
+| [`incidents/`](/home/jack/project-2611-docs/docs/incidents/) | 事故复盘与 G0–G9 门禁 |
 
 ---
 
-## 一句话设计
+## 产品是什么
 
-**HubDeck = 原生启动器（目录） + Tailscale（通道）**。
+| 能力 | 来源 |
+| --- | --- |
+| 书签 / 多标签 / 下载 / 历史 / 无痕 / 地址栏搜索 | **GeckoView（Firefox 引擎）** |
+| 内网可达（tailnet 地址） | **App 内置 tsnet 隧道 + 本地 HTTP 代理 + PAC** |
+| 内网服务导航页 | **一份 YAML** 渲染的静态卡片页 |
+| 凭据（tsnet auth key） | **Android Keystore** 加密 |
 
-- 目录是 HubDeck 的本职：服务、分类、标签、收藏、多个访问地址、健康状态，全部存在本地 Room 数据库里，可导出成人类可读的 `hubdeck.yaml`。
-- 通道交给 Tailscale：HubDeck **不做 VPN、不做流量代理**，只在需要时读取本机 tailnet 状态（Local API）、把服务地址切换成 MagicDNS 名字，其余交给系统浏览器（Custom Tab）完成。
-
-这样既满足"统一入口"，又满足"在外访问"，还不会变成一个持有明文凭据的中间人。
-
----
-
-## 关键设计决策（摘要）
-
-| # | 决策 | 一句话理由 |
-| --- | --- | --- |
-| 1 | 原生 App，而不是又一个 Web 面板 | 启动快、离线可用、有 Widget、能常驻桌面；且不要求自建服务器 |
-| 2 | 不内置 VPN / 不代理流量 | Android 上已有成熟的官方 Tailscale 客户端；代理会带来凭据与合规风险 |
-| 3 | Local API secret 是**可选增强** | Android 上第三方 App 读不到官方客户端私有存储 → secret 只能"粘贴一次"，因此核心功能不依赖它 |
-| 4 | 服务地址用"多端点 + 语义主机名"建模 | LAN / Tailnet / 公网三套地址共存，切网自动切换，可手动覆盖 |
-| 5 | 网络上下文用"多信号 + 用户可锁"判定 | Local API > Wi-Fi SSID > 探测结果，任何单一信号都会失效 |
-| 6 | 控制平面 API 只读、scope 最小化 | token 权限远大于 Local API secret，泄露影响必须被限制 |
-| 7 | 内嵌 tsnet 延后到 M5 且做可选构建变体 | Go 运行时包体、userspace 栈性能、供应链与官方 App 互斥，收益不匹配 |
-| 8 | 数据文件化（YAML） | 可进 Git、可分享、可从 Homarr 导入，配置不锁死在任何一家 |
-
-详见 [`tailscale-integration.md`](/home/jack/project-2611-docs/docs/tailscale-integration.md) 的 ADR-001 ~ ADR-007。
+不做：服务目录 CRUD、健康探测、多端点地址模型、Widget、账号体系、密码管理、服务器依赖。
 
 ---
 
-## 代码脚手架现状
+## 工程结构（瘦身后）
 
-已实现（核心算法与接口契约）：
+```
+android/
+├── app/                装配壳：Application / MainActivity / 导航 / DI
+├── core/
+│   ├── model/          契约本体：InternalService / TunnelState / SecretStore（纯 Kotlin）
+│   ├── data/           YAML 清单 / App 设置 / Keystore 凭据 / 书签
+│   └── tunnel/         tsnet 节点 + 本地代理（127.0.0.1:1080）+ PAC
+├── feature/
+│   ├── browser/        GeckoView 浏览器底座
+│   ├── home/           内网服务导航页
+│   └── settings/       设置
+└── benchmark/          性能基准占位（M4 接 macrobenchmark）
+```
 
-- 数据层：Room 实体 / DAO / Repository、领域模型映射
-- 配置互通：`hubdeck.yaml` 导出与解析、Homarr YAML 导入与字段映射
-- Tailscale：Local API 只读客户端（`/api/v2/status`）、控制平面设备目录客户端、`TailnetState` 映射
-- 网络：TCP / HTTP 探测（含"DNS 解析失败 / 需要登录 / 超时"等原因分类）
-- 决策逻辑：`EndpointResolver`（选端点）、`EndpointUrlRenderer`（渲染 MagicDNS 地址）、`NetworkContextResolver`（在家/在外判定）
-- 安全：`CredentialStore`（Keystore + AES-256-GCM）
-- UI 骨架：仪表盘（搜索 / 分类 / 状态徽标）、服务详情（端点切换）、Tailscale 面板、设置（导入导出）
-- 单元测试：端点解析、地址渲染、网络上下文判定、Homarr 导入
+**技术栈**：Kotlin 2.2.21 · AGP 8.12 · Gradle 8.13 · Compose/Material 3 · Hilt（KSP）· GeckoView 147 · tsnet 0.14.0 · DataStore · kaml
 
-未完成（属于 M1 起的实现任务）：
+---
 
-- 首次 Gradle 编译（**本环境无 JDK / Android SDK，代码尚未通过编译验证**）
-- 添加/编辑服务界面、Widget、导入预览向导、后台探测调度
+## 怎么跑
+
+```bash
+# 本地自检（编译 + 单测 + Lint + debug APK）
+bash scripts/local-build.sh          # 约 25 分钟（GeckoView 体积大）
+bash scripts/local-build.sh --no-apk # 跳过打包，快一些
+
+# CI 是唯一交付证据
+# .github/workflows/ci.yml（构建 + 单测 + Lint）
+# .github/workflows/apk.yml（APK）
+# .github/workflows/ci-emulator.yml（模拟器取证）
+```
+
+> **本机构建约束**：GeckoView 的 dex 合并需要 ≥2.5G 堆（`gradle.properties` 已配）；
+> 磁盘需留 ≥3GB（GeckoView AAR 244MB + 构建产物）。
+
+---
+
+## 已知缺口（详见 `contracts.md` §4）
+
+| 编号 | 问题 |
+| --- | --- |
+| **G-1** | **PAC 尚未接线到 GeckoView** —— 隧道与代理就绪，但引擎仍直连，内网打不开（M1 第一任务） |
+| G-2 | 浏览器完整能力未接线（多标签 / 书签 / 下载 / 历史 / 无痕） |
+| G-3 | 隧道状态条未做 |
+| G-4 | `com.klethron:tsnet` 非官方包，来源与许可未评估 |
+| G-5 | 包体与冷启动未实测（debug APK 580MB，含 4 个 ABI） |
+| G-10 | CI 尚未在新的工具链版本上验证 |
 
 ---
 
 ## 下一步
 
-1. 在具备 JDK 17 + Android SDK 的机器上完成首次构建，修正编译问题（roadmap M1 任务 1.1）。
-2. 按 [`roadmap.md`](/home/jack/project-2611-docs/docs/roadmap.md) 的 M1 验收标准推进：目录 CRUD → 多地址打开 → 导入导出 → 搜索/分类 → Widget。
-3. 带着真实 tailnet 走一遍 [`tailscale-integration.md`](/home/jack/project-2611-docs/docs/tailscale-integration.md) §7 的 V1–V7 验证清单。
+1. **M1-1.1**：把 PAC 接到 GeckoView（决定这个 App 到底能不能替代两个 App）。
+2. **M1-1.2**：用引擎能力补齐标签 / 书签 / 下载 / 历史 / 无痕（不自造浏览器）。
+3. 真机 + 真实 tailnet 走一遍通道 A 验收（`device-test-channel.md` §2）。
+4. M3：tsnet 依赖评估 + 包体 / 冷启动基准（`roadmap.md` §1 M3）。

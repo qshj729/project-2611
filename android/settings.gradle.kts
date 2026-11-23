@@ -3,6 +3,7 @@ pluginManagement {
         google()
         mavenCentral()
         gradlePluginPortal()
+        maven { url = uri("https://maven.mozilla.org/maven2/") }
     }
 }
 
@@ -11,27 +12,25 @@ dependencyResolutionManagement {
     repositories {
         google()
         mavenCentral()
+        // GeckoView（Firefox 引擎）只在 Mozilla 自己的仓库发布
+        maven { url = uri("https://maven.mozilla.org/maven2/") }
     }
 }
 
 rootProject.name = "MyApps"
 
-// 装配壳：Application / MainActivity / 导航 / DI 装配（docs/design.md §7.2）
+// 装配壳：Application / MainActivity / 导航 / DI 装配
 include(":app")
 
-// core：领域模型与基础设施
-include(":core:model") // 纯 Kotlin（Kotlin JVM），不得依赖任何 Android SDK 库
-include(":core:data") // Room / Repository / 导入导出 / DataStore
-include(":core:network") // OkHttp 客户端 / 探测器
-include(":core:tailscale") // Local API 客户端 / 控制平面客户端 / 地址解析
-include(":core:tunnel") // tsnet 隧道管理 / 本地代理 / 代理配置
+// core：契约本体 + 数据 + 隧道
+include(":core:model")  // 纯 Kotlin（Kotlin JVM）：领域契约本体
+include(":core:data")   // 内网服务 YAML / App 设置 / Keystore 凭据
+include(":core:tunnel") // tsnet 节点 + 本地转发代理 + PAC
 
 // feature：界面
-include(":feature:dashboard")
-include(":feature:service")
-include(":feature:settings")
-include(":feature:tailscale")
-include(":feature:browser")
+include(":feature:browser")  // GeckoView 浏览器底座（书签/标签/下载）
+include(":feature:home")     // 内网服务导航页
+include(":feature:settings") // 设置（隧道授权、清单导入导出、主题）
 
-// 基准测试占位（docs/design.md §7.2；macrobenchmark 插件在 M4 接入）
+// 基准测试占位（M4 接入 macrobenchmark）
 include(":benchmark")

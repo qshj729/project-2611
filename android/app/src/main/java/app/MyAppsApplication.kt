@@ -10,8 +10,8 @@ import app.di.MyAppsApplicationEntryPoint
 class MyAppsApplication : Application() {
     override fun onCreate() {
         super.onCreate()
-        // Apply initial proxy configuration (disconnected = all DIRECT)
+        // 初始化本地代理（不连接时全直连），并让 PAC 一直可取
         val entryPoint = EntryPointAccessors.fromApplication(this, MyAppsApplicationEntryPoint::class.java)
-        entryPoint.proxyConfigurator().apply(this, app.core.model.TailnetState())
+        entryPoint.localProxyServer().start(this, null)
     }
 }

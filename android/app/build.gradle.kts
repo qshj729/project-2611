@@ -116,8 +116,10 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
 
-    kotlinOptions {
-        jvmTarget = "17"
+    kotlin {
+        compilerOptions {
+            jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
+        }
     }
 
     buildFeatures {
@@ -139,32 +141,22 @@ android {
     }
 }
 
-ksp {
-    arg("room.schemaLocation", "$projectDir/schemas")
-    arg("room.generateKotlin", "true")
-}
-
 dependencies {
     // ---------------------------------------------------------------------------
     // 多模块骨架（docs/design.md §7.2）
     //
     // app 只做装配壳（Application / MainActivity / 导航 / DI）。
-    // 目前各模块只有依赖声明，代码仍留在 app 里；每条实现线把自己的包搬进对应模块后，
-    // 再把这里对应的直接依赖删掉即可。
     // ---------------------------------------------------------------------------
     implementation(project(":core:model"))
     implementation(project(":core:data"))
-    implementation(project(":core:network"))
-    implementation(project(":core:tailscale"))
     implementation(project(":core:tunnel"))
-    implementation(project(":feature:dashboard"))
-    implementation(project(":feature:service"))
-    implementation(project(":feature:settings"))
-    implementation(project(":feature:tailscale"))
     implementation(project(":feature:browser"))
+    implementation(project(":feature:home"))
+    implementation(project(":feature:settings"))
 
     // 通用依赖走版本目录里的模块级 bundle，版本只在 gradle/libs.versions.toml 维护
     implementation(libs.bundles.app.runtime)
+
     implementation(libs.klethron.tsnet)
 
     implementation(platform(libs.compose.bom))
@@ -175,14 +167,10 @@ dependencies {
     ksp(libs.hilt.compiler)
     implementation(libs.hilt.navigation.compose)
 
-    implementation(libs.room.runtime)
-    implementation(libs.room.ktx)
-    ksp(libs.room.compiler)
-
     implementation(libs.okhttp)
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.kaml)
-    implementation(libs.androidx.webkit)
+    implementation(libs.androidx.browser)
 
     implementation(libs.datastore.preferences)
     implementation(libs.work.runtime.ktx)
@@ -191,7 +179,6 @@ dependencies {
     testImplementation(libs.junit)
     testImplementation(libs.mockito.core)
     testImplementation(libs.kotlinx.coroutines.test)
-    testImplementation(libs.mockwebserver)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(platform(libs.compose.bom))

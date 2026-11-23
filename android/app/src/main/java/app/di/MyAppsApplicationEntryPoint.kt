@@ -1,8 +1,8 @@
 package app.di
 
-import app.core.tunnel.ProxyConfigurator
+import app.core.data.config.InternalServicesStore
+import app.core.tunnel.LocalProxyServer
 import app.core.tunnel.TunnelManager
-import app.core.tailscale.TailnetRepository
 import dagger.hilt.EntryPoint
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
@@ -14,7 +14,7 @@ import dagger.hilt.components.SingletonComponent
 @EntryPoint
 @InstallIn(SingletonComponent::class)
 interface MyAppsApplicationEntryPoint {
-    fun proxyConfigurator(): ProxyConfigurator
-    fun tailnetRepository(): TailnetRepository
+    fun localProxyServer(): LocalProxyServer
+    fun internalServicesStore(): InternalServicesStore
     fun tunnelManager(): TunnelManager
 }

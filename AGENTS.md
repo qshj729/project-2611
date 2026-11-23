@@ -84,14 +84,16 @@
 /home/jack/project-2611-docs/docs/
 ```
 
-- `/home/jack/project-2611-docs/docs/design.md` — 设计系统、领域模型、仓储契约、无障碍规范
-- `/home/jack/project-2611-docs/docs/contracts.md` — 接口契约版本
-- `/home/jack/project-2611-docs/docs/roadmap.md` — 里程碑与验收标准
+- `/home/jack/project-2611-docs/docs/design.md` — **设计正本**（**v2，2026-11-22**：产品形态 = Tailscale 套壳浏览器；ADR-201 ~ ADR-205；现状与遗留 §6）
+- `/home/jack/project-2611-docs/docs/contracts.md` — **冻结契约与模块归属**（**v2.0**：C-01 ~ C-09；已知缺口 §4；架构冲突 §9）
+- `/home/jack/project-2611-docs/docs/roadmap.md` — 里程碑与验收标准（M0 已完成，M1 = PAC 接线 + 浏览器能力）
+- `/home/jack/project-2611-docs/docs/tailscale-integration.md` — Tailscale 能力盘点与旧 ADR 台账（**历史参考**；ADR-001/006/007 已被反转，勿直接照用）
 - `/home/jack/project-2611-docs/docs/ci-only-policy.md` — 构建与验收口径
 - `/home/jack/project-2611-docs/docs/acceptance-template.md` — 验收模板
 - `/home/jack/project-2611-docs/docs/device-test-channel.md` — 设备通道手册
 - `/home/jack/project-2611-docs/docs/incidents/` — 事故复盘记录
 - `/home/jack/project-2611-docs/` 根目录 — 任务级资料（PR 草稿、任务清单、抓取日志等，见 §4.4）
+- `/home/jack/project-2611-docs/archive-20261122/` — 2026-11-22 文档对齐前的原文快照（可追溯）
 
 > 说明：源码注释与 `scripts/`、`.github/workflows/` 中出现的 `docs/X.md §N` 均指向上方项目文档区的同名文件，仓库内不再保留 `docs/` 目录。
 

@@ -11,7 +11,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import app.core.tunnel.TunnelProvider
 import app.ui.MyAppsApp
 import app.ui.theme.MyAppsTheme
 import dagger.hilt.android.AndroidEntryPoint
@@ -30,38 +29,33 @@ class MainActivity : ComponentActivity() {
     }
 }
 
+/**
+ * 应用外壳：启动隧道（有 auth key 时自动连接），并渲染主界面。
+ */
 @Composable
 fun TunnelAwareApp() {
     val context = LocalContext.current.applicationContext
 
-    // Get Hilt entry point for dependencies
     val entryPoint = dagger.hilt.android.EntryPointAccessors.fromApplication(
         context, app.di.MyAppsApplicationEntryPoint::class.java
     )
-
-    // Use Hilt-provided TunnelManager (singleton)
     val tunnelManager = entryPoint.tunnelManager()
 
-    // Start tunnel on first composition if auth key is saved
+    // 首次组合时尝试启动隧道（内部读 Keystore 里的 auth key）
     val started = remember { mutableStateOf(false) }
     if (!started.value) {
         started.value = true
-        // Initialize tunnel provider (loads auth key if any)
-        val authKey = TunnelProvider.initTunnel(context)
-        if (authKey != null) {
-            tunnelManager.start(authKey)
-        } else {
-            tunnelManager.startIfConfigured()
-        }
+        tunnelManager.startIfConfigured()
     }
 
-    // Observe tunnel state for logging/debugging
+    // 订阅隧道状态（供 UI 显示；调试日志）
     val tunnelState by tunnelManager.tunnelState.collectAsStateWithLifecycle()
 
-    // Apply initial proxy config (disconnected = all DIRECT) - will be updated by tunnel manager
     LaunchedEffect(tunnelState) {
-        // TunnelManager handles proxy config updates internally
+        // 状态变化由 UI 层订阅，这里保留钩子
     }
 
-    MyAppsApp()
+    // 服务清单存储由 Hilt 提供（单例 DataStore，不能重复创建）
+    val servicesStore = entryPoint.internalServicesStore()
+    MyAppsApp(servicesStore = servicesStore)
 }
