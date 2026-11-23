@@ -1,12 +1,12 @@
-// :core:data —— Room / Repository / 导入导出 / DataStore（docs/design.md §7.2）
+// :core:data —— 内网服务清单（YAML）、App 设置、Keystore 凭据
 //
-// 归属：roadmap §2 的 A 线（数据与配置）。
-// 包名暂时保持 app.core.data.*，待 A 线负责人搬迁时统一收敛。
+// 归属：数据线。
+// 不再包含 Room：服务清单是"配置文件"（YAML 文本），用 DataStore 存；
+// 凭据（tsnet auth key）用 Android Keystore 加密后存 SharedPreferences。
 plugins {
     alias(libs.plugins.android.library)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.serialization)
-    alias(libs.plugins.ksp)
 }
 
 android {
@@ -14,15 +14,7 @@ android {
     compileSdk = 35
 
     defaultConfig {
-        minSdk = 26
-        consumerProguardFiles("consumer-rules.pro")
-    }
-
-
-    testOptions {
-        // JVM 单测里 android.jar 的方法默认抛 "Stub!"；
-        // 让它们返回默认值，Log/Context 之类的调用才不会把单测打挂。
-        unitTests.isReturnDefaultValues = true
+        minSdk = 34
     }
 
     compileOptions {
@@ -30,23 +22,24 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
 
-    kotlinOptions {
-        jvmTarget = "17"
+    kotlin {
+        compilerOptions {
+            jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
+        }
+    }
+
+    testOptions {
+        unitTests.isReturnDefaultValues = true
     }
 }
 
-ksp {
-    arg("room.schemaLocation", "$projectDir/schemas")
-    arg("room.generateKotlin", "true")
-}
-
 dependencies {
-    // 领域模型是所有模块共享的契约，用 api 暴露
     api(project(":core:model"))
 
-    implementation(libs.bundles.core.data)
-    implementation(libs.bundles.feature.hilt)
-    ksp(libs.room.compiler)
+    implementation(libs.datastore.preferences)
+    implementation(libs.kotlinx.serialization.json)
+    implementation(libs.kaml)
+    implementation(libs.gson)
 
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)
