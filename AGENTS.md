@@ -100,7 +100,7 @@
 
 - **2026-11-20**：清理 8 个废弃 "Chat with X" issues（CMP-17/22/23/24/34/35/39/40）→ `cancelled`
   - 约束 `issues_conversation_identity_check` 要求先清空会话字段再置状态
-  - 详见：`/root/notes/hubdeck/2026-11-20-cancel-chat-with-x-issues.md`
+  - 详见：`/root/docs/hubdeck/2026-11-20-cancel-chat-with-x-issues.md`
 
 ---
 
