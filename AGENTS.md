@@ -1,6 +1,10 @@
 # HubDeck Project Shared AGENTS.md
 
-此文件包含所有 HubDeck 项目成员共同遵守的通用规范。各角色专属内容请见各自的 `~/.paperclip/.../agents/{role}/instructions/AGENTS.md`，并在文件开头引用本文件。
+> **唯一正本**：本文件 —— `/home/jack/project-2611/AGENTS.md`（随代码进仓、随 commit 走）。
+> 旧副本 `/home/jack/.paperclip/.../projects/.../_default/AGENTS.md` 已于 2026-11-24 废弃并删除：
+> **不要再读那个路径，也不要在那里改**。所有角色一律引用本文件路径。
+
+此文件包含所有 HubDeck 项目成员共同遵守的通用规范。各角色专属内容请见各自的 `~/.paperclip/.../agents/{role}/instructions/AGENTS.md`，并在文件开头引用本文件路径。
 
 ---
 
@@ -73,6 +77,7 @@
 4. **禁做清单**：不在代码、测试夹具或文档里写真实凭据；不擅自改动已公示的实体字段语义；不本地打 APK、不下载 JDK / SDK / system image、不起本地模拟器；不把任务个人工作文件（任务清单 / todos / 草稿 / 抓取日志等）写进代码仓库——这类资料统一落到项目文档区 `/home/jack/project-2611-docs`，不要 `git add` 进代码副本（参考 `todos.md` 误留仓库的先例，属 CMP-52 非本分支内容）；并在 `.gitignore` 加对应忽略项（如 `.paperclip/`、`logs.zip`）兜底，防止误入库
 5. **阻塞与升级**：真阻塞用 `blockedByIssueIds` 或带 owner 的 `unblockDescriptor`，并写清下一步；需要跨角色配合时留言给对应 owner
 6. **沟通**：见第 1 节
+7. **共享规范归属**：共享规范（协作 / 工作区 / 交付 / 纪律）只在本文件维护，**只有技术负责人（Kai）能改**；角色文件只写自己独有的部分，不复制共享内容。改了共享规范 → 只改本文件 → 同步各角色文件顶部的引用块。
 
 ---
 
@@ -106,11 +111,12 @@
 
 ## 7. 引用方式
 
-在各角色的 AGENTS.md 文件开头添加：
+在各角色（agent 级与 `instructions/` 级）的 AGENTS.md 文件开头添加：
 
 ```markdown
 # 引用项目共享规范
-见：`/home/jack/.paperclip/instances/default/projects/f10f9109-c653-4ea3-a4cc-27ab49be3ea5/3e162065-c840-4b27-a56a-5deecd1953be/_default/AGENTS.md`
+见：`/home/jack/project-2611/AGENTS.md`（唯一正本，随代码进仓）
 
-本文件仅包含该角色**独有**的职责、完成定义、禁做清单与参考文档。
+本文件仅包含该角色**独有**的职责、完成定义、禁做清单与参考文档；
+共享的协作 / 工作区 / 交付 / 纪律规范一律以正本为准，不要在本文件里复制。
 ```
