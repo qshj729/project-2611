@@ -4,7 +4,7 @@
 在外面访问家里的内网服务，不再需要同时开「浏览器」和「Tailscale App」两个应用。
 
 > 工作名 **MyApps**（`applicationId = top.quup.myapps`，源码根包 `app`）。
-> 设计期代号 HubDeck；工程标识（`hubdeck.yaml` 等）暂时沿用旧名，见 `contracts.md` G-6。
+> 工程标识（`hubdeck.yaml` 等）暂时沿用旧名，见 `contracts.md` G-6。
 
 ---
 
