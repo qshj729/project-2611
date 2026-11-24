@@ -41,7 +41,7 @@ fi
 cd "$REPO_ROOT/android"
 
 # GitHub Actions 的 runner 是独占的 7GB 机器，R8 合并 dex 需要比 1g 更大的堆；
-# 本机（Paperclip 宿主机只有 5.9GB、还要跑数据库与 agent 进程）保持 gradle.properties 里的 1g 上限。
+# 本机（宿主机只有 5.9GB、还要跑数据库与 agent 进程）保持 gradle.properties 里的 1g 上限。
 # 2026-11-13 实测：CI runner 上 1g 堆会让 :app:mergeExtDexDebug 抛 OutOfMemoryError
 # （run 43414013454，模拟器取证工作流因此假红）。这里只在 GitHub Actions 里放宽。
 GRADLE_JVM_ARGS_OVERRIDE=""

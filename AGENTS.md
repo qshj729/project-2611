@@ -1,7 +1,7 @@
 # MyApps（HubDeck）· 项目共享 AGENTS.md
 
 > **唯一正本**：`/home/jack/project-2611/AGENTS.md` —— 随代码进仓、随 commit 走。
-> 旧副本 `/home/jack/.paperclip/.../projects/.../_default/AGENTS.md` 已于 2026-11-24 废弃并删除，**不要再读那个路径**。
+> 旧副本（各 agent 工作区下的 `_default/AGENTS.md`）已于 2026-11-24 废弃并删除，**不要再读那个路径**。
 > **冲突裁决**：本文件 > 文档区（`/home/jack/project-2611-docs/docs/`）> 角色文件。发现文档与本文件不一致 → 以本文件为准，并留言让技术负责人改文档。
 > **维护**：共享规范只在本文件维护，**只有技术负责人（Kai）能改**；角色文件只写自己独有的部分，不复制共享内容。
 
@@ -44,16 +44,16 @@
 ## 1. 协作协议
 
 ### 1.1 等待用户输入
-任何等待用户输入的场景，**必须先读 paperclip skill 的 waiting 章节**，然后建 `interaction` + `PATCH in_review`。
+需要用户拍板才能继续时：先在任务下发起提问（建 interaction）并把状态置为待审（`in_review`），然后停手等回复；不要反复轮询催问。
 
 ### 1.2 语言
 **用中文思考，用中文回复**；评论、提交信息、文档一律中文。
 
 ### 1.3 心跳与结案
-- 遵循 `paperclip` skill 的心跳流程与结案路径。
+- 遵循平台的任务心跳流程与结案路径（有任务就开工，没任务就报告待命）。
 - 评论遵循公司 `agent-communication-standards`（acs-v2，A 档 ≤ 12 行，四行块：结论 / 变更与证据 / 风险与阻塞 / 下一步）。
-- **评论里不贴裸日志或工具输出残渣**；超长内容写进 Document（`plan` / `spec` / `design` / `test-plan` / `retrospective` / `runbook`）。
-- 内部链接带公司前缀：`/PAP/issues/PAP-xxx`、`/PAP/agents/...`；工单号做成链接 `[PAP-224](/PAP/issues/PAP-224)`。
+- **评论里不贴裸日志或工具输出残渣**；超长内容写进任务文档（`plan` / `spec` / `design` / `test-plan` / `retrospective` / `runbook`）。
+- 工单号写成可点链接：`[<工单号>](/<板块>/issues/<工单号>)`。
 
 ## 2. 权威工作区与 Git 纪律
 
@@ -155,7 +155,7 @@ bash scripts/local-build.sh --no-apk   # 只编译 + 单测 + Lint（更快）
    - 不在代码、测试夹具或文档里写真实凭据；
    - 不擅自改动已公示的实体字段语义；
    - 不本地打 release APK、不下载 JDK / SDK / system-image、不起本地模拟器；
-   - 不把任务个人工作文件（任务清单 / todos / 草稿 / 抓取日志等）写进代码仓库 —— 统一落到项目文档区 `/home/jack/project-2611-docs`，并在 `.gitignore` 加忽略项兜底（如 `.paperclip/`、`logs.zip`）。
+   - 不把任务个人工作文件（任务清单 / todos / 草稿 / 抓取日志等）写进代码仓库 —— 统一落到项目文档区 `/home/jack/project-2611-docs`，并在 `.gitignore` 加忽略项兜底（工作区元数据目录、`logs.zip` 等）。
 5. **阻塞与升级**：真阻塞用 `blockedByIssueIds` 或带 owner 的 `unblockDescriptor`，写清下一步；需要跨角色配合时留言给对应 owner。
 6. **沟通**：见 §1。
 7. **共享规范归属**：只在本文件维护，只有技术负责人能改；角色文件不复制共享内容。
@@ -403,7 +403,7 @@ services:
 
 - `gradle.properties` 已配 `-Xmx2560m` / `-XX:MaxMetaspaceSize=768m`（GeckoView 的 dex 合并需要 ≥2.5G 堆，1G 会 OOM）；本机 5.8GB RAM / 2 核。
 - **磁盘不足时只清**：`android/**/build`、`.build-logs/`、Gradle 缓存里可重建的部分。
-- **禁止删除**：`~/.paperclip/cli`（≈2.4GB）、`~/.hermes`（≈2.9GB）—— 平台 CLI 与 Hermes 工具链。
+- **禁止删除**：平台 CLI 目录 `~/.paperclip/cli`（≈3GB）与 Hermes 工具链 `~/.hermes`（≈2.9GB）—— 删了会毁掉本机环境。
 - `~/.cache/hubdeck-toolchain` 已于 2026-11-13 删除（≈11GB），**不得恢复**。
 
 ### 12.3 工程坑
@@ -493,7 +493,7 @@ services:
 | **工程线（Juno）** | CI、Gradle、测试基线、APK 产出 | 不把「CI 验证不了」写成「已通过」 |
 | **设计（Iris）** | 设计令牌、组件规范、交互流程、无障碍标注 | 不写 Compose 实现代码；令牌变更需 Kai 评技术可行性 |
 
-> 每个角色的完整定义、证据要求、禁做清单见各自的 `~/.paperclip/.../agents/{role}/instructions/AGENTS.md`。
+> 每个角色的完整定义、证据要求、禁做清单见各自的角色说明文件（agent 级与 `instructions/` 级的 `AGENTS.md`）。
 
 ## 16. 引用方式
 

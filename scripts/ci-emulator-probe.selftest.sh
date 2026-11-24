@@ -79,7 +79,7 @@ esac
 STUB_EOF
 chmod +x "$STUB/adb"
 
-# 注意：Paperclip harness 每次 bash 调用都会重写 PATH（把自定义前缀换成 per-run 目录），
+# 注意：harness 每次 bash 调用都会重写 PATH（把自定义前缀换成 per-run 目录），
 # 所以不能用「PATH 前面塞一个目录」来替换 adb —— 改用导出的 shell 函数：
 # bash 子进程里函数优先于 PATH 查找。
 export STUB

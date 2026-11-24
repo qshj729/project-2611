@@ -7,7 +7,7 @@
 #   scripts/serve-apk.sh --apk /path/to/other.apk
 #
 # 说明:
-#   - Paperclip 附件上限 10MB，装不下 60MB+ 的隧道版 APK，所以走局域网直下。
+#   - 附件上传上限 10MB，装不下 60MB+ 的隧道版 APK，所以走局域网直下。
 #   - 只在本机局域网可达（绑定 0.0.0.0，手机与本机同一 Wi-Fi 即可）。
 #   - 窗口到点自动关闭服务；README.txt 与 APK 同目录，内含 sha256 与安装说明。
 
