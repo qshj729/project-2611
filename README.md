@@ -11,7 +11,7 @@
 ## 文档索引
 
 > **先读 [`AGENTS.md`](/home/jack/project-2611/AGENTS.md)** —— 共享规范唯一正本：开发规范、设计规范、重要注意事项、文档索引都在里面。
-> 设计与规范文档已迁出仓库，统一存放在项目文档区 `/home/jack/project-2611-docs/docs/`（见 `AGENTS.md` §14）。
+> 设计与规范文档已迁出仓库，统一存放在项目文档区 `/home/jack/project-2611-docs/docs/`（见 `AGENTS.md` §12）。
 
 | 文档 | 内容 |
 | --- | --- |

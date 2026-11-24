@@ -1,6 +1,6 @@
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
-// :core:model —— 纯 Kotlin 领域模型（AGENTS.md §8.1 模块结构）
+// :core:model —— 纯 Kotlin 领域模型（AGENTS.md §7.1 模块结构）
 //
 // 约束（验收项）：本模块 **不使用 Android Gradle Plugin**，不依赖任何 Android SDK 库，
 // 因此领域模型可以在 JVM 上直接跑单测、被 importer/exporter 复用。
