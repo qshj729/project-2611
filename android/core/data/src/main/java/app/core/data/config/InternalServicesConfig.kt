@@ -21,7 +21,7 @@ import kotlinx.serialization.Serializable
  * - `url` 允许 MagicDNS 短名（如 `http://jellyfin:8096`）——隧道代理端负责解析；
  * - 字段缺失不影响导入（除 `title` / `url`）。
  *
- * 设计参考：/home/jack/project-2611-docs/docs/design.md §5
+ * 设计参考：AGENTS.md §9.2（YAML 清单格式）/ contracts.md C-02
  */
 @Serializable
 private data class ServicesFile(
