@@ -6,7 +6,7 @@ package app.core.model
  * **唯一一份定义**：`:core:tunnel` 产生它，`:feature:*` 消费它，`:app` 只做接线。
  * 任何模块不得再自定义同名状态类型。
  *
- * 设计参考：/home/jack/project-2611-docs/docs/design.md §6.4
+ * 设计参考：AGENTS.md §9（C-01 契约本体）/ contracts.md C-01
  */
 sealed interface TunnelState {
     /** 未配置 auth key / 未启动隧道。 */
