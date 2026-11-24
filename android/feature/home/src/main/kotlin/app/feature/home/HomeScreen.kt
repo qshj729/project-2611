@@ -48,7 +48,7 @@ import kotlinx.coroutines.flow.map
  *
  * 用 DataStore 里的 YAML 渲染分组卡片网格，点击 → 交给浏览器打开（走 PAC → 隧道代理）。
  *
- * 设计参考：AGENTS.md §9（C-02 清单 / C-08 导航页）/ contracts.md C-08
+ * 设计参考：AGENTS.md §8（C-02 清单 / C-08 导航页）/ contracts.md C-08
  */
 @Composable
 fun HomeScreen(

@@ -7,7 +7,7 @@ import org.mozilla.geckoview.GeckoRuntimeSettings
 /**
  * GeckoView 运行时。
  *
- * 设计参考：AGENTS.md §7（ADR-201 / ADR-202）、§9（C-07 浏览器底座）/ contracts.md C-07
+ * 设计参考：AGENTS.md §6（ADR-201 / ADR-202）、§8（C-07 浏览器底座）/ contracts.md C-07
  */
 object GeckoRuntimeProvider {
 
