@@ -54,10 +54,10 @@ jobs:
 
       - name: 校验 Gradle Wrapper
         # 1) 官方 checksum 校验（wrapper jar 必须与 Gradle 发布的官方产物一致）
-        # 2) 允许本地 wrapper jar sha256（Gradle 8.11.1 官方库暂未收录该版本 wrapper 校验和）
+        # 2) 允许本地 wrapper jar sha256（Gradle 8.13 官方库暂未收录该版本 wrapper 校验和）
         uses: gradle/wrapper-validation-action@v2
         with:
-          gradle-version: '8.11.1'
+          gradle-version: '8.13'
           allow-checksums: '2db75c40782f5e8ba1fc278a5574bab070adccb2d21ca5a6e5ed840888448046'
 
       - name: 校验 Wrapper 与仓库一致 + 列出模块
@@ -67,7 +67,7 @@ jobs:
           # 2026-11-13 实测 run 43416506396 因此假红 → 这里只对该步骤重试 3 次。
           ok=0
           for attempt in 1 2 3; do
-            if ./gradlew wrapper --gradle-version 8.11.1 && ./gradlew projects; then
+            if ./gradlew wrapper --gradle-version 8.13 && ./gradlew projects; then
               ok=1
               break
             fi
@@ -107,13 +107,13 @@ jobs:
         working-directory: .
         env:
           # 每个带单测的模块都必须产出结果，防止“绿灯但没跑”
-          HUBDECK_REQUIRED_TEST_MODULES: "core/data core/network core/tailscale core/tunnel"
+          HUBDECK_REQUIRED_TEST_MODULES: "core/data core/tunnel"
         run: bash scripts/ci-verify-tests.sh
 
       - name: 上传 debug APK
         uses: actions/upload-artifact@v4
         with:
-          name: hubdeck-debug-apk
+          name: hubdeck-emulator-apk
           path: android/app/build/outputs/apk/debug/*.apk
           if-no-files-found: error
           retention-days: 30

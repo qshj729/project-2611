@@ -69,7 +69,7 @@ jobs:
       - name: 校验 Gradle Wrapper
         uses: gradle/wrapper-validation-action@v2
         with:
-          gradle-version: '8.11.1'
+          gradle-version: '8.13'
           allow-checksums: '2db75c40782f5e8ba1fc278a5574bab070adccb2d21ca5a6e5ed840888448046'
 
       - name: 构建 Debug APK（唯一构建入口）
