@@ -4,7 +4,7 @@
 > **入口**：`AGENTS.md`（同目录）—— 工程说明书与本文件的索引（读哪一节、怎么改、归谁管）。
 > **状态**：`todo.md`（同目录，只存本地、不入版本库）—— 当前进展、未闭合项、决策待办、验收状态（会变的东西）。
 > **维护**：技术负责人维护；其他线只读，要改先留言。
-> **位置**：本文件在仓库根，随代码进仓；事故复盘（`incidents/`）与验收截图（`shots/`）仍在项目文档区 `~/hubdeck-docs/docs/`。
+> **位置**：本文件在仓库根，随代码进仓；事故复盘（`incidents/`）与验收截图（`shots/`）仍在项目文档区 `~/project-2611-docs/docs/`。
 > **替代**：本文件整合自原 `design.md` / `contracts.md` / `plan.md` / `delivery.md` 四份文档（2026-11-25 合并），旧文件不再被引用。
 
 ---
@@ -42,7 +42,7 @@
 | 浏览器底座 | GeckoView（Firefox 引擎）147.0.20260212191108 + Mozilla 官方组件（MPL-2.0） |
 | 隧道 | `com.klethron:tsnet:0.14.0`（userspace tailnet 节点）+ 本地 HTTP 代理 + PAC |
 | 存储 | DataStore preferences（设置 / 清单 / 书签）+ Android Keystore（凭据） |
-| 代码仓库 | `~/hubdeck`（`android/` 为 Gradle 工程） |
+| 代码仓库 | `~/project-2611`（`android/` 为 Gradle 工程） |
 
 ### 1.2 使用场景（真实动线）
 
