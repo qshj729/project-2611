@@ -17,6 +17,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import app.core.data.config.InternalServicesStore
+import app.core.model.TunnelState
 import app.feature.browser.BrowserScreen
 import app.feature.home.HomeScreen
 import app.feature.settings.SettingsScreen
@@ -36,6 +37,8 @@ private enum class MainTab(val label: String) {
 @Composable
 fun MyAppsApp(
     servicesStore: InternalServicesStore,
+    tunnelState: TunnelState,
+    authUrl: String?,
 ) {
     var tab by remember { mutableStateOf(MainTab.HOME) }
     // 从导航页点进来的目标地址（浏览器屏消费）
@@ -78,6 +81,8 @@ fun MyAppsApp(
             MainTab.BROWSER -> BrowserScreen(
                 initialUrl = pendingUrl ?: "",
                 onUrlConsumed = { pendingUrl = null },
+                tunnelState = tunnelState,
+                authUrl = authUrl,
             )
 
             MainTab.SETTINGS -> SettingsScreen(onBack = { tab = MainTab.HOME })

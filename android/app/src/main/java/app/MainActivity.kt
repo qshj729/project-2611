@@ -48,14 +48,12 @@ fun TunnelAwareApp() {
         tunnelManager.startIfConfigured()
     }
 
-    // 订阅隧道状态（供 UI 显示；调试日志）
+    // 订阅隧道状态（供 UI 显示）
     val tunnelState by tunnelManager.tunnelState.collectAsStateWithLifecycle()
-
-    LaunchedEffect(tunnelState) {
-        // 状态变化由 UI 层订阅，这里保留钩子
-    }
+    // 订阅授权链接（供状态条点击打开）
+    val authUrl by tunnelManager.authUrl.collectAsStateWithLifecycle()
 
     // 服务清单存储由 Hilt 提供（单例 DataStore，不能重复创建）
     val servicesStore = entryPoint.internalServicesStore()
-    MyAppsApp(servicesStore = servicesStore)
+    MyAppsApp(servicesStore = servicesStore, tunnelState = tunnelState, authUrl = authUrl)
 }

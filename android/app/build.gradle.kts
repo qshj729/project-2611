@@ -150,6 +150,7 @@ dependencies {
     implementation(project(":core:model"))
     implementation(project(":core:data"))
     implementation(project(":core:tunnel"))
+    implementation(project(":core:ui"))
     implementation(project(":feature:browser"))
     implementation(project(":feature:home"))
     implementation(project(":feature:settings"))
