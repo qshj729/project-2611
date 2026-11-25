@@ -48,6 +48,7 @@ android {
 dependencies {
     api(project(":core:model"))
     implementation(project(":core:data"))
+    testImplementation(project(":core:tunnel"))
 
     implementation(libs.geckoview)
     implementation(libs.compose.ui.text)
