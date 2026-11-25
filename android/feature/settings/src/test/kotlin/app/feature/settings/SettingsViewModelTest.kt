@@ -5,8 +5,9 @@ import app.core.data.settings.ThemePreference
 import app.core.model.TunnelState
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.setMain
 import org.junit.Assert.assertEquals
@@ -22,6 +23,7 @@ import org.junit.Test
  *
  * 验证 ViewModel 状态流转与业务逻辑，不依赖 Compose 或 Android 框架。
  * 这部分测试在 JVM 上完全可跑通，作为 testDebugUnitTest 的门禁。
+ * 使用 kotlinx.coroutines.test.runTest + StandardTestDispatcher 自动推进虚拟时钟。
  */
 class SettingsViewModelTest {
 
@@ -38,7 +40,7 @@ class SettingsViewModelTest {
     }
 
     @Test
-    fun testViewModel_initialState() = runBlocking {
+    fun testViewModel_initialState() = runTest {
         val fakeSettingsStore = FakeSettingsStore()
         val fakeServicesStore = FakeInternalServicesStore()
         val fakeSecretStore = FakeSecretStore()
@@ -64,7 +66,7 @@ class SettingsViewModelTest {
     }
 
     @Test
-    fun testViewModel_themePreferenceChange() = runBlocking {
+    fun testViewModel_themePreferenceChange() = runTest {
         val fakeSettingsStore = FakeSettingsStore()
         val fakeServicesStore = FakeInternalServicesStore()
         val fakeSecretStore = FakeSecretStore()
@@ -78,13 +80,14 @@ class SettingsViewModelTest {
 
         // 修改主题偏好
         viewModel.setThemePreference(ThemePreference.DARK)
+        advanceUntilIdle()
 
         val settings = viewModel.settings.first()
         assertEquals(ThemePreference.DARK, settings.themePreference)
     }
 
     @Test
-    fun testViewModel_tunnelSettingsChange() = runBlocking {
+    fun testViewModel_tunnelSettingsChange() = runTest {
         val fakeSettingsStore = FakeSettingsStore()
         val fakeServicesStore = FakeInternalServicesStore()
         val fakeSecretStore = FakeSecretStore()
@@ -99,6 +102,7 @@ class SettingsViewModelTest {
         viewModel.setAutoConnectTunnel(true)
         viewModel.setOpenHomeOnLaunch(false)
         viewModel.setUseTailnetProxy(true)
+        advanceUntilIdle()
 
         val settings = viewModel.settings.first()
         assertTrue(settings.autoConnectTunnel)
@@ -107,7 +111,7 @@ class SettingsViewModelTest {
     }
 
     @Test
-    fun testViewModel_exportServices() = runBlocking {
+    fun testViewModel_exportServices() = runTest {
         val fakeSettingsStore = FakeSettingsStore()
         val fakeServicesStore = FakeInternalServicesStore().apply {
             setServices(listOf(
@@ -129,6 +133,7 @@ class SettingsViewModelTest {
         )
 
         viewModel.exportServices()
+        advanceUntilIdle()
 
         val exported = viewModel.exportedYaml.first()
         assertNotNull(exported)
@@ -137,7 +142,7 @@ class SettingsViewModelTest {
     }
 
     @Test
-    fun testViewModel_importValidYaml() = runBlocking {
+    fun testViewModel_importValidYaml() = runTest {
         val fakeSettingsStore = FakeSettingsStore()
         val fakeServicesStore = FakeInternalServicesStore()
         val fakeSecretStore = FakeSecretStore()
@@ -157,6 +162,7 @@ class SettingsViewModelTest {
         """.trimIndent()
 
         viewModel.importServices(validYaml)
+        advanceUntilIdle()
 
         val summary = viewModel.importSummary.first()
         assertNotNull(summary)
@@ -164,7 +170,7 @@ class SettingsViewModelTest {
     }
 
     @Test
-    fun testViewModel_importInvalidYaml() = runBlocking {
+    fun testViewModel_importInvalidYaml() = runTest {
         val fakeSettingsStore = FakeSettingsStore()
         val fakeServicesStore = FakeInternalServicesStore()
         val fakeSecretStore = FakeSecretStore()
@@ -184,6 +190,7 @@ class SettingsViewModelTest {
         """.trimIndent()
 
         viewModel.importServices(invalidYaml)
+        advanceUntilIdle()
 
         val summary = viewModel.importSummary.first()
         assertNotNull(summary)
@@ -191,7 +198,7 @@ class SettingsViewModelTest {
     }
 
     @Test
-    fun testViewModel_tunnelStatePropagation() = runBlocking {
+    fun testViewModel_tunnelStatePropagation() = runTest {
         val fakeSettingsStore = FakeSettingsStore()
         val fakeServicesStore = FakeInternalServicesStore()
         val fakeSecretStore = FakeSecretStore()
@@ -205,6 +212,7 @@ class SettingsViewModelTest {
 
         // 模拟隧道状态变化
         fakeTunnelProvider.setTunnelState(TunnelState.Starting)
+        advanceUntilIdle()
         val startingState = viewModel.tunnelState.first()
         assertTrue(startingState is TunnelState.Starting)
 
@@ -215,6 +223,7 @@ class SettingsViewModelTest {
                 magicDnsSuffix = "test.ts.net"
             )
         )
+        advanceUntilIdle()
         val connectedState = viewModel.tunnelState.first()
         assertTrue(connectedState is TunnelState.Connected)
         assertEquals("test-node", (connectedState as TunnelState.Connected).nodeName)
