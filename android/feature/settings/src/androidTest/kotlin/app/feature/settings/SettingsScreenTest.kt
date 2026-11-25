@@ -14,7 +14,7 @@ import org.junit.Test
  * 设置页 UI 测试（骨架）。
  *
  * 当前只验证"设置页能渲染出关键分区"。
- * 完整交互（隧道授权、清单导入导出）需要 Hilt 测试环境 + 假隧道，放到 M1 一并补（见 contracts.md G-8）。
+ * 完整交互（隧道授权、清单导入导出）需要 Hilt 测试环境 + 假隧道，放到 M1 一并补（见 design.md §4.13 G-8）。
  */
 @OptIn(ExperimentalMaterial3Api::class)
 class SettingsScreenTest {
