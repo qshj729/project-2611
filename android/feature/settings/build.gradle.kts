@@ -19,6 +19,12 @@ android {
         minSdk = 34
     }
 
+    testOptions {
+        unitTests {
+            isIncludeAndroidResources = true
+        }
+    }
+
     buildFeatures {
         compose = true
     }
@@ -32,6 +38,11 @@ android {
         compilerOptions {
             jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
         }
+    }
+
+    // tsnet 依赖要求 compileSdk 37，但项目用 35；禁用 AAR 元数据检查
+    tasks.withType(com.android.build.gradle.internal.tasks.CheckAarMetadataTask::class.java) {
+        enabled = false
     }
 }
 
@@ -48,8 +59,17 @@ dependencies {
     ksp(libs.hilt.compiler)
 
     testImplementation(libs.junit)
+    testImplementation(libs.kotlinx.coroutines.test)
+    testImplementation("org.robolectric:robolectric:4.13")
 
-    // UI 测试
+    // JVM 单测用的 Compose UI 测试依赖（Robolectric + Compose JUnit4 rule）
+    testImplementation(platform(libs.compose.bom))
+    testImplementation(libs.compose.ui.test.junit4)
+    testImplementation(libs.compose.ui.test.manifest)
+    testImplementation(libs.androidx.activity.compose)
+    testImplementation("androidx.compose.ui:ui-test")
+
+    // UI 测试（androidTest 需设备/模拟器）
     androidTestImplementation(platform(libs.compose.bom))
     androidTestImplementation(libs.compose.ui.test.junit4)
     debugImplementation(libs.compose.ui.test.manifest)

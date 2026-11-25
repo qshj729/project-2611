@@ -61,26 +61,47 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
+/**
+ * 设置页 ViewModel 接口（供 UI 与测试共用）。
+ * 所有成员默认 open，实现类可直接 override。
+ */
+interface SettingsViewModel {
+    val settings: kotlinx.coroutines.flow.StateFlow<AppSettings>
+    val exportedYaml: kotlinx.coroutines.flow.StateFlow<String?>
+    val importSummary: kotlinx.coroutines.flow.StateFlow<String?>
+    val tunnelState: kotlinx.coroutines.flow.StateFlow<TunnelState>
+
+    fun exportServices()
+    fun importServices(yaml: String)
+    fun startTunnelAuthorization()
+    fun clearAuthKey()
+    fun setThemePreference(value: ThemePreference)
+    fun setAutoConnectTunnel(value: Boolean)
+    fun setOpenHomeOnLaunch(value: Boolean)
+    fun setUseTailnetProxy(value: Boolean)
+    fun openOpenSourceLicenses()
+}
+
 @HiltViewModel
-class SettingsViewModel @Inject constructor(
+class SettingsViewModelImpl @Inject constructor(
     private val settingsStore: SettingsStore,
     private val servicesStore: InternalServicesStore,
     private val secretStore: SecretStore,
     private val tunnelManager: TunnelManager,
     @ApplicationContext private val context: Context,
-) : ViewModel() {
+) : ViewModel(), SettingsViewModel {
 
     private val _settings = MutableStateFlow(AppSettings())
-    val settings: StateFlow<AppSettings> = _settings
+    override val settings: StateFlow<AppSettings> = _settings
 
     private val _exportedYaml = MutableStateFlow<String?>(null)
-    val exportedYaml: StateFlow<String?> = _exportedYaml
+    override val exportedYaml: StateFlow<String?> = _exportedYaml
 
     private val _importSummary = MutableStateFlow<String?>(null)
-    val importSummary: StateFlow<String?> = _importSummary
+    override val importSummary: StateFlow<String?> = _importSummary
 
     private val _tunnelState = MutableStateFlow<TunnelState>(TunnelState.Disconnected)
-    val tunnelState: StateFlow<TunnelState> = _tunnelState
+    override val tunnelState: StateFlow<TunnelState> = _tunnelState
 
     init {
         observeSettings()
@@ -99,13 +120,13 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
-    fun exportServices() {
+    override fun exportServices() {
         viewModelScope.launch {
             _exportedYaml.value = servicesStore.exportYaml()
         }
     }
 
-    fun importServices(yaml: String) {
+    override fun importServices(yaml: String) {
         viewModelScope.launch {
             runCatching { InternalServicesConfig.parse(yaml) }
                 .onSuccess { result ->
@@ -122,14 +143,14 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
-    fun startTunnelAuthorization() {
+    override fun startTunnelAuthorization() {
         viewModelScope.launch {
             val authUrl = tunnelManager.authUrl.first()
             if (!authUrl.isNullOrBlank()) openInBrowser(authUrl)
         }
     }
 
-    fun clearAuthKey() {
+    override fun clearAuthKey() {
         viewModelScope.launch {
             secretStore.clearAuthKey()
             tunnelManager.stop()
@@ -142,23 +163,23 @@ class SettingsViewModel @Inject constructor(
         context.startActivity(intent)
     }
 
-    fun setThemePreference(value: ThemePreference) {
+    override fun setThemePreference(value: ThemePreference) {
         viewModelScope.launch { settingsStore.setThemePreference(value) }
     }
 
-    fun setAutoConnectTunnel(value: Boolean) {
+    override fun setAutoConnectTunnel(value: Boolean) {
         viewModelScope.launch { settingsStore.setAutoConnectTunnel(value) }
     }
 
-    fun setOpenHomeOnLaunch(value: Boolean) {
+    override fun setOpenHomeOnLaunch(value: Boolean) {
         viewModelScope.launch { settingsStore.setOpenHomeOnLaunch(value) }
     }
 
-    fun setUseTailnetProxy(value: Boolean) {
+    override fun setUseTailnetProxy(value: Boolean) {
         viewModelScope.launch { settingsStore.setUseTailnetProxy(value) }
     }
 
-    fun openOpenSourceLicenses() {
+    override fun openOpenSourceLicenses() {
         val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/qshj729/project-2611/blob/main/LICENSE"))
         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         context.startActivity(intent)
@@ -168,7 +189,7 @@ class SettingsViewModel @Inject constructor(
 @Composable
 fun SettingsScreen(
     onBack: () -> Unit,
-    viewModel: SettingsViewModel = hiltViewModel(),
+    viewModel: SettingsViewModel = hiltViewModel<SettingsViewModelImpl>(),
 ) {
     val settings by viewModel.settings.collectAsStateWithLifecycle()
     val exported by viewModel.exportedYaml.collectAsStateWithLifecycle()
