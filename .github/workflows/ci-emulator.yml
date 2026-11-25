@@ -6,7 +6,7 @@ name: CI Emulator
 # 2026-11-19 更新：仅里程碑/手动/主分支跑，PR 不再自动跑（省 runner-min，避免 TCG 假红）。
 # 2026-11-21 更新：主分支也不再自动跑。托管 runner 无 /dev/kvm，只能 TCG 软模拟，
 #   实测冷启动 ~12 分钟、单轮 30–120 分钟、5 轮仅 1 轮跑通取证，且有被平台 shutdown 强杀的风险。
-#   设备验收改由真机承担（见项目文档区 design.md §7.6.2）；
+#   设备验收改由真机承担（见仓库根 design.md §7.6.2）；
 #   本 workflow 保留为手动备用，需要补充环境时用 workflow_dispatch 触发。
 #
 # 产物（artifact）就是验收证据：

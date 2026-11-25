@@ -2,8 +2,8 @@
 
 > **本文件是工程说明书 + 权威文档索引。** 读它知道「项目怎么干、谁管哪、证据怎么交、去哪查设计」。
 > **权威文档只有两份**：
-> - **`/home/jack/project-2611-docs/docs/design.md`** —— **应用设计方案（权威）**：产品形态、ADR、模块结构、冻结契约 C-01~C-09、数据格式、交付验收口径、里程碑、风险登记册。
-> - **`/home/jack/project-2611-docs/todo.md`** —— **进展与待办**：当前阶段、未闭合项、M1 清单、待拍板决策、验收状态。
+> - **`design.md`（仓库根）** —— **应用设计方案（权威）**：产品形态、ADR、模块结构、冻结契约 C-01~C-09、数据格式、交付验收口径、里程碑、风险登记册。
+> - **`todo.md`（仓库根，只存本地、不入版本库）** —— **进展与待办**：当前阶段、未闭合项、M1 清单、待拍板决策、验收状态。
 >
 > 原 `design.md` / `contracts.md` / `plan.md` / `delivery.md` 四份文档已合并进 `design.md`（2026-11-25），**不再单独存在、不再被引用**。
 > **冲突裁决**：本文件（干活方式）> `design.md`（怎么设计）> `todo.md`（做到哪）。
@@ -30,7 +30,7 @@
 | 仓库 | `/home/jack/project-2611`（`android/` 是 Gradle 工程），远端 `github.com/qshj729/hubdeck` |
 | 模块 | 8 个：`:app` + `:core:model` / `:core:data` / `:core:tunnel` + `:feature:browser` / `:feature:home` / `:feature:settings` + `:benchmark` |
 | 依赖方向 | `:core:model` ← `:core:data` `:core:tunnel` ← `:feature:*` ← `:app`（只往下，无环） |
-| 方案在哪 | **应用设计方案 = `docs/design.md`**（ADR / 契约 / 数据格式 / 交付口径 / 里程碑 / 风险） |
+| 方案在哪 | **应用设计方案 = 仓库根 `design.md`**（ADR / 契约 / 数据格式 / 交付口径 / 里程碑 / 风险） |
 | 进展待办 | **`todo.md`** —— 当前阶段、未闭合项 G-1~G-10、M1 清单、待拍板 D1–D6、验收状态 |
 | 交付 | 本地 `bash scripts/local-build.sh` 绿 → push → PR → **证据只认 Actions artifact** |
 | 你的活 | 你能碰哪个目录看 §8.2 归属表；改契约看 §8.3 流程；交证据看 §3–§4 |
@@ -240,21 +240,25 @@ App 启动 → TunnelManager.startIfConfigured()
 ## 8. 文档地图
 
 ```
-/home/jack/project-2611-docs/
-├── todo.md              ← 进展与待办（会变）：当前阶段 / 未闭合项 / M1 清单 / 待拍板 / 验收状态
-├── docs/
-│   ├── design.md        ← ★ 应用设计方案（权威，不常变）：产品 / ADR / 模块 / 契约 / 数据格式 /
-│   │                       交付验收口径 / 里程碑 / 风险登记册 / Tailscale 要点 / V1–V7
-│   ├── incidents/       ← 事故复盘（G0–G9 收口门禁）
-│   └── shots/           ← 设备验收截图（不进仓库）
-└── archive-*/           ← 历史快照，可追溯
+/home/jack/project-2611/                ← 代码仓库根
+├── AGENTS.md                           ← 本文件：工程说明书 + 权威文档索引
+├── design.md                           ← ★ 应用设计方案（权威正本，随代码进仓）
+├── todo.md                             ← 进展与待办（只存本地，.gitignore 已忽略）
+├── android/                            ← Gradle 工程
+└── README.md                           ← 对外说明
+
+/home/jack/project-2611-docs/           ← 项目文档区（不进代码仓库）
+├── docs/incidents/                     ← 事故复盘（G0–G9 门禁）
+├── docs/shots/                         ← 设备验收截图（不进仓库）
+├── archive-*/                          ← 历史快照，可追溯
+└── （根目录）                          ← 任务级资料：PR 草稿、任务清单、抓取日志
 ```
 
 ### 8.1 我要查什么 → 看哪一节
 
 | 我要查什么 | 去哪查 |
 | --- | --- |
-| **当前进展 / 待办 / 决策状态 / 验收状态** | `todo.md` |
+| **当前进展 / 待办 / 决策状态 / 验收状态** | `todo.md`（仓库根，只存本地） |
 | 产品是什么、目标 / 非目标、ADR 全文与被否决方案 | `design.md` §1–§2 |
 | 模块结构、依赖方向、关键数据流 | `design.md` §3 |
 | **契约完整签名与全部不变量** | `design.md` §4（C-01~C-09） |
@@ -272,7 +276,7 @@ App 启动 → TunnelManager.startIfConfigured()
 | 仓库对外说明 | 仓库内 `README.md` |
 
 > **旧文档说明**：原 `design.md`（产品/ADR/模块）、`contracts.md`（契约）、`plan.md`（里程碑/验收）、`delivery.md`（交付/设备）四份已合并为单一的 `design.md`（2026-11-25）。
-> 旧版本留档在 `/home/jack/project-2611-docs/archive-20261125/pre-merge-4-docs/`。**源码注释与脚本里出现的 `docs/X.md §N` 均指向上表**；`docs/contracts.md`、`docs/plan.md`、`docs/delivery.md` 已不存在。
+> 旧版本留档在 `/home/jack/project-2611-docs/archive-20261125/pre-merge-4-docs/`。**源码注释与脚本里出现的 `design.md §N` 均指仓库根的 `design.md`**；`docs/contracts.md`、`docs/plan.md`、`docs/delivery.md` 已不存在。
 
 ### 8.2 目录归属表（谁能直接改）
 
@@ -298,7 +302,7 @@ App 启动 → TunnelManager.startIfConfigured()
 | `scripts/**` | 构建 / 自检 / 取证脚本 | **工程线** |
 | `README.md`、`AGENTS.md` | 仓库说明、共享规范 | **工程线**（`AGENTS.md` 内容变更需技术负责人拍板） |
 | `android/benchmark/**` | 性能基准占位 | **工程线**（M4 接 macrobenchmark） |
-| 项目文档区 `docs/design.md`、`todo.md` | 权威设计方案、进展待办 | **技术负责人**（其他线只读；要改先留言） |
+| 项目文档区 `docs/incidents/`、`docs/shots/` | 事故复盘、验收截图 | **技术负责人**（其他线只读；要改先留言） |
 
 ### 8.3 契约变更流程
 

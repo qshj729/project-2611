@@ -34,6 +34,9 @@ Thumbs.db
 emulator-evidence/
 docs/shots/
 
+# 进展与待办（会变的东西，只存本地，不进版本库）
+/todo.md
+
 # 工具态与抓取日志（不进版本库；任务个人资料见项目文档区 /home/jack/project-2611-docs）
 .paperclip/
 logs.zip
