@@ -5,7 +5,7 @@
 #   通道 A：USB 或无线调试的真机，走原生 adb
 #   通道 B：Limrun 云模拟器，走 lim CLI
 #   通道 D：本地模拟器（AVD），同样走原生 adb（序列号形如 emulator-5554），启动见
-#           delivery.md §6
+#           design.md §7.6
 #
 # 用法:
 #   scripts/device-session.sh status              # 探测可用通道 + 打印设备信息
@@ -121,7 +121,7 @@ no_channel_hint() {
   warn "  通道 A（真机，主通道）：把开启「USB 调试 / 无线调试」的设备接到本机，adb devices 能看到 device 状态。"
   warn "  通道 B（云模拟器）：lim login --api-key <key> 或 export LIM_API_KEY=<key>，然后 lim android create。"
   warn "  通道 D（本地 AVD）已于 2026-11-13 下线；通道 E（Actions 模拟器）已降为手动备用。"
-  warn "详见项目文档区 delivery.md §6。"
+  warn "详见项目文档区 design.md §7.6。"
   exit 3
 }
 

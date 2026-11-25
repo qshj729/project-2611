@@ -6,7 +6,7 @@ package app.core.model
  * 目前只存 **tsnet auth key**——它等价于 tailnet 的入场券，必须落 Keystore 加密，
  * 不允许明文写 SharedPreferences。
  *
- * 设计参考：AGENTS.md §8（C-01 / C-04）/ contracts.md C-01
+ * 设计参考：design.md §4.2（C-01）/ §4.5（C-04）
  */
 interface SecretStore {
     /** 读取 auth key；没有或解密失败返回 null。 */

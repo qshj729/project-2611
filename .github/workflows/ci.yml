@@ -82,7 +82,7 @@ jobs:
           ./gradlew :core:model:dependencies --configuration runtimeClasspath > model-deps.txt
           cat model-deps.txt
           if grep -Eiq 'androidx|com\.android' model-deps.txt; then
-            echo "::error:::core:model 依赖了 Android SDK 库，违反 contracts.md §6"
+            echo "::error:::core:model 依赖了 Android SDK 库，违反 design.md §3.1"
             exit 1
           fi
 

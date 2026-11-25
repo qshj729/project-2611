@@ -7,7 +7,7 @@ package app.core.model
  * 这里只描述"内网服务的静态清单"——标题、地址、图标、分组；
  * 不做服务目录 CRUD、不做健康探测、不做多端点地址模型。
  *
- * 设计参考：AGENTS.md §8（C-01 契约本体）/ contracts.md C-01
+ * 设计参考：design.md §4.2（C-01 契约本体）
  */
 data class InternalService(
     val title: String,

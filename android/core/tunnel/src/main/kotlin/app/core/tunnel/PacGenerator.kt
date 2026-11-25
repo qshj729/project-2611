@@ -14,7 +14,7 @@ package app.core.tunnel
  * - **不含点的主机名**（MagicDNS 短名，如 `jellyfin`） → 走本地代理（公网几乎没有单段主机名）；
  * - 其余 → 直连。
  *
- * 设计参考：AGENTS.md §8.1（PAC 路由规则，唯一事实源）/ contracts.md C-06
+ * 设计参考：design.md §4.7（C-06 PAC 规则，唯一事实源）
  */
 object PacGenerator {
 

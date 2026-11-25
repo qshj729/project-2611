@@ -1,9 +1,14 @@
-# MyApps（HubDeck）· 项目共享 AGENTS.md
+# MyApps（HubDeck）· 项目 AGENTS.md
 
-> **唯一正本**：`/home/jack/project-2611/AGENTS.md` —— 随代码进仓、随 commit 走。
-> **冲突裁决**：本文件 > 文档区（`/home/jack/project-2611-docs/docs/`）> 角色文件。发现文档与本文件不一致 → 以本文件为准，并留言让技术负责人改文档。
+> **本文件是工程说明书 + 权威文档索引。** 读它知道「项目怎么干、谁管哪、证据怎么交、去哪查设计」。
+> **权威文档只有两份**：
+> - **`/home/jack/project-2611-docs/docs/design.md`** —— **应用设计方案（权威）**：产品形态、ADR、模块结构、冻结契约 C-01~C-09、数据格式、交付验收口径、里程碑、风险登记册。
+> - **`/home/jack/project-2611-docs/todo.md`** —— **进展与待办**：当前阶段、未闭合项、M1 清单、待拍板决策、验收状态。
+>
+> 原 `design.md` / `contracts.md` / `plan.md` / `delivery.md` 四份文档已合并进 `design.md`（2026-11-25），**不再单独存在、不再被引用**。
+> **冲突裁决**：本文件（干活方式）> `design.md`（怎么设计）> `todo.md`（做到哪）。
 > **维护**：共享规范只在本文件维护，**只有技术负责人（Kai）能改**；角色文件只写自己独有的部分，不复制共享内容。
-> **本文件只写「基本不变」的东西**（规范 / 设计 / 红线）。当前进展、待办、决策状态一律在 `todo.md`。
+> **本文件只写「基本不变」的东西**（规范 / 索引 / 红线）；进展、待办、决策状态一律在 `todo.md`。
 
 **目录**
 
@@ -11,9 +16,8 @@
 | --- | --- | --- |
 | 速览 | §0 | **每个任务开始先看这 30 秒** |
 | 第一部分 · 开发规范 | §1–§4 | 工作区、构建、交付、纪律 |
-| 第二部分 · 设计规范 | §5–§9 | 产品是什么、架构、模块、契约、工具链 |
-| 第三部分 · 重要注意事项 | §10–§11 | 红线、工程坑、真机验收基线 |
-| 第四部分 · 引用文档 | §12–§14 | 长尾细则在文档区哪一份哪一节 |
+| 第二部分 · 注意事项 | §5–§7 | 红线、坑、验收基线 |
+| 第三部分 · 权威文档索引 | §8–§10 | 要查设计 / 查进展 / 角色归属 |
 
 ---
 
@@ -25,16 +29,17 @@
 | 形态 | Kotlin + Compose，minSdk 34 / targetSdk 35，`applicationId = top.quup.myapps`，源码根包 `app`；**自用不上架**，无账号、无服务器、无遥测 |
 | 仓库 | `/home/jack/project-2611`（`android/` 是 Gradle 工程），远端 `github.com/qshj729/hubdeck` |
 | 模块 | 8 个：`:app` + `:core:model` / `:core:data` / `:core:tunnel` + `:feature:browser` / `:feature:home` / `:feature:settings` + `:benchmark` |
-| 文档区 | `/home/jack/project-2611-docs/docs/`（design / contracts / plan / delivery / incidents） |
-| 进展与待办 | **`/home/jack/project-2611-docs/todo.md`** —— 当前阶段、未闭合项、M1 清单、待拍板决策、验收状态 |
+| 依赖方向 | `:core:model` ← `:core:data` `:core:tunnel` ← `:feature:*` ← `:app`（只往下，无环） |
+| 方案在哪 | **应用设计方案 = `docs/design.md`**（ADR / 契约 / 数据格式 / 交付口径 / 里程碑 / 风险） |
+| 进展待办 | **`todo.md`** —— 当前阶段、未闭合项 G-1~G-10、M1 清单、待拍板 D1–D6、验收状态 |
 | 交付 | 本地 `bash scripts/local-build.sh` 绿 → push → PR → **证据只认 Actions artifact** |
-| 你的活 | 你能碰哪个目录看 §7.2 归属表；改契约看 §8.3 流程；交证据看 §2–§3 |
+| 你的活 | 你能碰哪个目录看 §8.2 归属表；改契约看 §8.3 流程；交证据看 §3–§4 |
 
 **三条最容易踩的坑**
 
 1. **别自造浏览器能力**：标签 / 书签 / 下载 / 历史 / 无痕必须用 GeckoView 或 Mozilla 组件实现，**不要自己写**（ADR-201）。
 2. **契约本体只有一份**：`InternalService` / `TunnelState` / `SecretStore` 定义在 `:core:model`，别的模块不得重定义同名类型（C-01）。
-3. **绿色构建会骗人**：模块 `NO-SOURCE` 也是绿的；收口前确认目标模块 `compileDebugKotlin` 有命中行（§2.4）。
+3. **绿色构建会骗人**：模块 `NO-SOURCE` 也是绿的；收口前确认目标模块 `compileDebugKotlin` 有命中行（§3.4）。
 
 ---
 ---
@@ -72,13 +77,14 @@
 ### 2.1 本地自检（提交前必过）
 
 ```bash
-bash scripts/local-build.sh            # 全量：编译 + 单测 + Lint + debug APK
+bash scripts/local-build.sh            # 全量：编译 + 单测 + Lint + debug APK（约 25 分钟）
 bash scripts/local-build.sh --no-apk   # 只编译 + 单测 + Lint（更快）
 ```
 
-- 全量约 25 分钟（GeckoView 体积大），命中缓存则秒级；**红了就地修，不要推**。
+- **红了就地修，不要推**；命中缓存则秒级。
 - **不打 release APK**（R8 在本机要数小时）→ release 只由 CI 出。
 - 只构建自己那条线的模块时用 `scripts/build.sh :core:tunnel:testDebugUnitTest` 这类目标，别整树构建。
+- 环境细节、内存与磁盘口径见 `design.md` §7.2 与本文件 §5.2。
 
 ### 2.2 唯一交付证据 = GitHub Actions
 
@@ -87,7 +93,7 @@ bash scripts/local-build.sh --no-apk   # 只编译 + 单测 + Lint（更快）
 | Workflow | 触发 | 干什么 |
 | --- | --- | --- |
 | `ci.yml` | 每次 push / PR | 构建 + 单测 + Lint |
-| `ci-emulator.yml` | 里程碑 / 手动 / 主分支 | CI 模拟器截图取证（通道 E） |
+| `ci-emulator.yml` | 里程碑 / 手动 / 主分支 | CI 模拟器截图取证（通道 E，手动备用） |
 | `apk.yml` | tag / 手动 | 隧道版 APK（release） |
 
 ### 2.3 证据口径
@@ -117,6 +123,7 @@ bash scripts/local-build.sh --no-apk   # 只编译 + 单测 + Lint（更快）
 - 结果只允许三种：`✅ 通过` / `❌ 失败`（附错误输出）/ `⛔ 待验证`（写明阻塞项与解除条件）。**只记录真跑出来的**。
 - 每条验收至少齐四样：复现命令 / 实际输出（原文不改写）/ 界面或日志证据 / 设备信息。
 - 截图命名：`/home/jack/project-2611-docs/docs/shots/<验收项编号>-<场景>-<序号>.png`（如 `1.1-inner-web-01.png`）；截图与 APK **不提交进仓库**。
+- 完整验收证据规范（截图命名细则 / logcat 截取 / 结论表格式 / 设备通道手册）见 `design.md` §7.7 与 §7.6。
 
 ## 3. 交付流程（九步）
 
@@ -136,96 +143,138 @@ bash scripts/local-build.sh --no-apk   # 只编译 + 单测 + Lint（更快）
 
 1. **完成定义**：按各角色专属定义执行。
 2. **证据要求**：每项变更 / 验收配 Actions run 链接 + artifact 名 + 结论行。
-3. **交接契约**：接口或实体语义要变，**先在任务下留言给相关 owner**，由技术负责人升 `contracts.md` 版本，再动手（§8.3）。
+3. **交接契约**：接口或实体语义要变，**先在任务下留言给相关 owner**，由技术负责人升 `design.md` §4 契约版本，再动手（§8.3）。
 4. **禁做清单**：
    - 不在代码、测试夹具或文档里写真实凭据；
    - 不擅自改动已公示的实体字段语义；
    - 不本地打 release APK、不下载 JDK / SDK / system-image、不起本地模拟器；
    - 不把任务个人工作文件（任务清单 / todos / 草稿 / 抓取日志等）写进代码仓库 —— 统一落到项目文档区 `/home/jack/project-2611-docs`，并在 `.gitignore` 加忽略项兜底（工作区元数据目录、`logs.zip` 等）。
 5. **阻塞与升级**：真阻塞要写明**阻塞原因 + owner + 下一步**；需要跨角色配合时提前留言给对应 owner，别硬扛。
-6. **沟通**：中文思考与回复；结论先行，不贴裸日志或工具输出残渣。
+6. **沟通**：中文思考与回复；结论先行，不贴裸日志或工具输出残渣；超长内容写进任务文档。
 7. **共享规范归属**：只在本文件维护，只有技术负责人能改；角色文件不复制共享内容。
 
 ---
 ---
 
-# 第二部分 · 设计规范（项目长什么样）
+# 第二部分 · 注意事项（别踩这些坑）
 
-## 5. 产品定义
+## 5. 红线
 
-### 5.1 一句话
+### 5.1 安全姿态
 
-**MyApps = Firefox 内核的浏览器 + 内置 tailnet 隧道**。公网照常浏览，家里 / 公司的内网服务在同一个 App 里直接打开，
-不用再切到系统级 Tailscale App。
+- **不终止 TLS**：代理只做 CONNECT 转发，App 看不到明文；但 App **确实在流量路径上**（能看到目标域名 / 端口 / 流量特征）→ 「关于」里写清楚。
+- **不存密码**：引擎的密码保存能力不主动开启。
+- **auth key 不落明文**：Keystore AES-256-GCM（alias `myapps.authkey.v1`）；不导出任何含 key 的文件；一键清除。
+- **权限最小**：只申请 `INTERNET` + `ACCESS_NETWORK_STATE`；**不申请** VPN / 定位 / 存储。
+- 数据全本地：无遥测、无账号、无服务器。
+- 详细条款见 `design.md` §2 ADR-204 与 §4.5 C-04。
 
-### 5.2 目标（可验证）
+### 5.2 构建与磁盘
 
-| 编号 | 目标 | 达成标准 |
+- `gradle.properties` 已配 `-Xmx2560m` / `-XX:MaxMetaspaceSize=768m`（GeckoView 的 dex 合并需要 ≥2.5G 堆，1G 会 OOM）；本机 5.8GB RAM / 2 核。
+- **磁盘不足时只清**：`android/**/build`、`.build-logs/`、Gradle 缓存里可重建的部分。
+- **禁止删除**：`~/.paperclip/cli`（≈3GB）、`~/.hermes`（≈2.9GB）—— 平台 CLI 与 Hermes 工具链。
+- `~/.cache/hubdeck-toolchain` 已于 2026-11-13 删除（≈11GB），**不得恢复**。
+
+### 5.3 工程坑
+
+- **GeckoView 无公开代理 API** → G-1 接线可能踩坑；备选顺序：引擎偏好 → `GeckoSessionSettings` 代理配置 → 必要时退回「本地代理 + 系统浏览器打开」。
+- **与官方 Tailscale App 双开可能互相干扰 MagicDNS** → 清单里优先写 FQDN 或 `100.x` IP，**不用短名**；错误文案引导。
+- **Private DNS（DoH）开启时 MagicDNS 查询被拦** → 同上，清单写 FQDN / IP，文案引导关闭。
+- **userspace 转发慢于内核 TUN** → 只承诺「面板类访问」；大文件建议用系统 App。
+- **文档与代码会漂移** → 每次里程碑收口做一次「文档 ↔ 代码」核对；契约变更必须升版。
+- 完整平台限制清单见 `design.md` §11.3。
+
+## 6. 关键数据流（记住这三条就不会改错）
+
+**打开一个内网服务**
+
+```
+导航页点卡片 → 读 DataStore 里的 YAML 文本 → InternalService
+  → 切浏览器页签 → GeckoSession.loadUri(url) → Gecko 按 PAC 路由
+       ├─ tailnet 目标 → 127.0.0.1:1080 → LocalProxyServer → tsnet 隧道
+       └─ 其余 → 直连
+```
+
+**隧道生命周期**
+
+```
+App 启动 → TunnelManager.startIfConfigured()
+  ├─ 无 auth key → TunnelState.Disconnected（公网直连，浏览器照常用）
+  └─ 有 key → tsnet node.start()
+        ├─ NEEDS_LOGIN → TunnelState.Authorizing(loginUrl) → 外部浏览器授权
+        ├─ RUNNING → LocalProxyServer.start(node) → TunnelState.Connected
+        └─ 出错 / 掉线 → TunnelState.Error → 停代理，浏览器回退直连
+```
+
+**PAC 路由规则（唯一事实源）**
+
+| 目标 | 返回 |
+| --- | --- |
+| `100.64.0.0/10` | `PROXY 127.0.0.1:1080; DIRECT` |
+| `*.ts.net` | `PROXY 127.0.0.1:1080; DIRECT` |
+| 单段主机名（MagicDNS 短名） | `PROXY 127.0.0.1:1080; DIRECT` |
+| 其余（公网 / LAN） | `DIRECT` |
+
+> 完整签名与不变量见 `design.md` §4（C-01~C-09）。
+
+## 7. 真机验收基线（V1–V7）
+
+> 验收项与预期基本不变；**每条的当前状态在 `todo.md`**；方法与判定见 `design.md` §11.4。
+
+| # | 验证项 | 预期 |
 | --- | --- | --- |
-| G1 | **一个 App 顶两个** | 蜂窝网络下，App 内可直接打开 tailnet 地址，无需启动系统级 Tailscale App |
-| G2 | **浏览器该有的都有** | 书签、多标签、下载、历史、无痕、地址栏搜索 —— 全部由引擎提供，不自己造 |
-| G3 | **内网导航够快** | 启动即看到 YAML 里的内网服务分组卡片，一次点击进浏览器 |
-| G4 | **安全默认** | 不终止 TLS、不存密码、auth key 走 Keystore、不申请 VPN / 定位 / 存储权限 |
-| G5 | **零服务器依赖** | 无后端、无账号；断网也能打开浏览器与导航页 |
+| V1 | **内网地址在 App 内浏览器打开**（核心） | 页面正常加载，流量经 `127.0.0.1:1080` |
+| V2 | 公网不受影响 | 正常加载（PAC `DIRECT` 回退） |
+| V3 | 隧道断开后浏览器仍可用 | 公网正常，内网给明确错误 |
+| V4 | Private DNS 影响 | 记录失败模式并优化文案 |
+| V5 | 授权流程 | 外部浏览器授权后回 App 自动连上 |
+| V6 | 包体 / 冷启动 / 隧道启动耗时 | 对照阈值给数字（包体 +25MB / 冷启动 +150ms） |
+| V7 | 转发性能边界 | 与系统 TUN 的差距有量化结论 |
 
-### 5.3 非目标（明确不做）
+---
+---
 
-- ❌ 服务目录的增删改查 UI、健康探测、分类标签、Widget —— 清单是**只读 YAML**，改文件或改导入即可。
-- ❌ 多端点地址模型（LAN / tailnet / public 三套地址）、❌「在家 / 在外」判定 —— 隧道常驻，YAML 里直接写最终地址。
-- ❌ Local API / 控制平面客户端（隧道自包含）、❌ Homarr 导入、❌ Serve / Funnel。
-- ❌ 容器编排、部署、反向代理、隧道服务。
-- ❌ 密码管理器 / 账号体系 / 多用户 / 团队共享。
-- ❌ 自研浏览器引擎、❌ fork 完整浏览器 App。
-- ❌ 分流 / 全局代理开关 —— 隧道只服务「访问自家 tailnet」这一件事。
+# 第三部分 · 权威文档索引
 
-## 6. 架构决策（ADR）
-
-| ADR | 决策 | 关键理由 | 代价 / 边界 |
-| --- | --- | --- | --- |
-| **ADR-201** | 浏览器底座 = **GeckoView**（不重写浏览器） | 书签 / 历史 / 下载 / 无痕引擎自带；支持 PAC 表达「只有 tailnet 走隧道」 | AAR 244MB → 构建慢、APK 大；**无公开代理设置 API**（只能走引擎偏好，G-1） |
-| **ADR-202** | 隧道 = **App 内 tsnet userspace 节点 + 本地 HTTP 代理 + PAC** | 不占系统 VPN 槽，可与官方 App 共存；PAC 的 `PROXY…; DIRECT` 保证隧道没连上时公网照常 | tsnet 是非官方包（待评估）；userspace 转发慢于内核 TUN → 只承诺「面板类访问」 |
-| **ADR-203** | 内网服务 = **只读 YAML + 静态导航页** | 自用场景不需要数据库 + CRUD + 同步 | 改清单要改文件或走设置页导入 |
-| **ADR-204** | 安全姿态 = **转发点，不是内容中间人** | 代理只做 CONNECT 转发，不终止 TLS；auth key 走 Keystore；不申请 VPN / 定位 / 存储权限 | App **确实在流量路径上**（能看到目标域名 / 端口 / 流量特征）→ 「关于」里必须写清楚 |
-
-**被否决的方案**（别再提）：系统 WebView + 自己写浏览器（书签 / 下载全要自己造）；fork Chromium 系浏览器 App（多进程、150MB+）；Firefox for Android 源码 fork（更重、无法定制）；读写官方 Tailscale Local API（第三方 App 读不到私有存储，Android 9+ 读 SSID 还要定位权限）。
-
-## 7. 模块结构与归属
-
-### 7.1 模块与依赖方向
+## 8. 文档地图
 
 ```
-:app                装配壳：Application / MainActivity / 导航 / DI / EntryPoint
-:core:model         契约本体：InternalService、TunnelState、SecretStore（纯 Kotlin，无 Android）
-:core:data          内网服务 YAML 解析 + App 设置（DataStore）+ Keystore 凭据 + 书签存储
-:core:tunnel        tsnet 节点生命周期 + 本地 HTTP 代理 + PAC 生成
-:feature:browser    GeckoView 浏览器底座（地址栏 / 导航页 / WebView 宿主）
-:feature:home       内网服务静态导航页
-:feature:settings   设置（隧道授权、清单导入导出、隧道开关、主题）
-:benchmark          性能基准占位（M4 接 macrobenchmark）
+/home/jack/project-2611-docs/
+├── todo.md              ← 进展与待办（会变）：当前阶段 / 未闭合项 / M1 清单 / 待拍板 / 验收状态
+├── docs/
+│   ├── design.md        ← ★ 应用设计方案（权威，不常变）：产品 / ADR / 模块 / 契约 / 数据格式 /
+│   │                       交付验收口径 / 里程碑 / 风险登记册 / Tailscale 要点 / V1–V7
+│   ├── incidents/       ← 事故复盘（G0–G9 收口门禁）
+│   └── shots/           ← 设备验收截图（不进仓库）
+└── archive-*/           ← 历史快照，可追溯
 ```
 
-```
-:core:model   ← 所有人依赖它，它不依赖任何人
-    ↑            ↑
-:core:data :core:tunnel
-    ↑            ↑
-:feature:home  :feature:browser  :feature:settings
-    └──────────────┬───────────────┘
-                   ↓
-                 :app（DI 装配 / 端口适配 / 导航）
-```
+### 8.1 我要查什么 → 看哪一节
 
-| 模块 | 允许依赖 | 禁止依赖 |
-| --- | --- | --- |
-| `:core:model` | 仅 Kotlin 标准库 | 任何 Android SDK / androidx / 其他模块 |
-| `:core:data` | `:core:model`（api） | `:core:tunnel`、`:feature:*` |
-| `:core:tunnel` | `:core:model`（api）、tsnet AAR | `:core:data`、`:feature:*`、`:app` |
-| `:feature:*` | `:core:model`（api）、需要的 `:core:*`（implementation） | 其它 `:feature:*`、`:app` |
-| `:app` | 全部 | — |
+| 我要查什么 | 去哪查 |
+| --- | --- |
+| **当前进展 / 待办 / 决策状态 / 验收状态** | `todo.md` |
+| 产品是什么、目标 / 非目标、ADR 全文与被否决方案 | `design.md` §1–§2 |
+| 模块结构、依赖方向、关键数据流 | `design.md` §3 |
+| **契约完整签名与全部不变量** | `design.md` §4（C-01~C-09） |
+| 契约变更流程、变更记录 CHG-xxx、已知缺口 G-1~G-10 | `design.md` §4.11–§4.13 |
+| 数据与配置格式（YAML / 设置项 / 凭据） | `design.md` §5 |
+| 功能范围 F1–F10、质量保障现状 | `design.md` §6 |
+| 本机环境、交付工作流、证据口径、磁盘纪律 | `design.md` §7.1–§7.5 |
+| 设备验收通道（A 真机 / B Limrun / E CI 模拟器）、标准四连 | `design.md` §7.6 |
+| 验收证据规范（截图命名 / logcat / 结论表 / 最小证据） | `design.md` §7.7 |
+| 里程碑 M0–M4、M1 收口清单 | `design.md` §8 |
+| 风险登记册 R1–R10、工具链版本矩阵、技术栈 | `design.md` §9 |
+| 未决问题、待拍板决策 D1–D6 | `design.md` §10 / `todo.md` §5 |
+| 术语、Tailscale 能力盘点、Android 平台限制、V1–V7 | `design.md` §11 |
+| 事故复盘与 G0–G9 门禁 | `docs/incidents/2026-11-10-m1-hard-kill.md` §6 |
+| 仓库对外说明 | 仓库内 `README.md` |
 
-> **为什么 `:core:tunnel` 不依赖 `:core:data`**：auth key 的**接口**在 `:core:model`，Keystore 实现只在 `:app` 注入 —— 隧道模块因此不碰 Android 存储实现，可在 JVM 单测里注入假实现。
+> **旧文档说明**：原 `design.md`（产品/ADR/模块）、`contracts.md`（契约）、`plan.md`（里程碑/验收）、`delivery.md`（交付/设备）四份已合并为单一的 `design.md`（2026-11-25）。
+> 旧版本留档在 `/home/jack/project-2611-docs/archive-20261125/pre-merge-4-docs/`。**源码注释与脚本里出现的 `docs/X.md §N` 均指向上表**；`docs/contracts.md`、`docs/plan.md`、`docs/delivery.md` 已不存在。
 
-### 7.2 目录归属表（谁能直接改）
+### 8.2 目录归属表（谁能直接改）
 
 * 每个路径前缀**只出现在一行**——没有双重所有权。「所有者」= 可以直接修改该路径下文件的人。
 * 别人要改你目录里的东西 → 走 §8.3 流程，由你执行。
@@ -249,183 +298,20 @@ bash scripts/local-build.sh --no-apk   # 只编译 + 单测 + Lint（更快）
 | `scripts/**` | 构建 / 自检 / 取证脚本 | **工程线** |
 | `README.md`、`AGENTS.md` | 仓库说明、共享规范 | **工程线**（`AGENTS.md` 内容变更需技术负责人拍板） |
 | `android/benchmark/**` | 性能基准占位 | **工程线**（M4 接 macrobenchmark） |
-| 项目文档区 `docs/*.md` | 设计 / 契约 / 计划 / 交付文档 | **技术负责人**（其他线只读；要改先留言） |
-
-## 8. 冻结契约速查（C-01 ~ C-09）
-
-> 完整签名、不变量与变更记录见 `/home/jack/project-2611-docs/docs/contracts.md` §2–§9。**签名以那里为准**，下表是速查。
-
-| 编号 | 契约 | 模块 / 包 | 一句话 | 关键不变量 |
-| --- | --- | --- | --- | --- |
-| **C-01** | 领域模型 | `:core:model` / `app.core.model` | `InternalService(title,url,icon,group,note)`、`sealed TunnelState`、`interface SecretStore` | 契约本体**唯一**；纯 Kotlin 不带 Android 类型；URL 只允许 http/https |
-| **C-02** | YAML 清单 | `:core:data` / `app.core.data.config` | `InternalServicesStore.observe/current/replaceAll/importYaml/exportYaml` + `InternalServicesConfig.parse/render` | 存的是**一段 YAML 文本**不是表；非 http(s) / 空标题进 `rejected`；`render∘parse` 往返无损 |
-| **C-03** | App 设置 | `:core:data` / `app.core.data.settings` | `AppSettings(themePreference,autoConnectTunnel,openHomeOnLaunch,useTailnetProxy)` + `SettingsStore` | 语义放纯 Kotlin，DataStore 只读写；新增项必须带默认值（A 级） |
-| **C-04** | 凭据（auth key） | 接口 `:core:model` / 实现 `:core:data` `app.core.data.security` | `SecretStore.authKey/saveAuthKey/clearAuthKey/hasAuthKey` | **绝不明文落盘**：Keystore AES-256-GCM（alias `myapps.authkey.v1`）→ SharedPreferences base64；解密失败返回 `null` 不抛异常；导出文件不得含 key |
-| **C-05** | 隧道生命周期 | `:core:tunnel` / `app.core.tunnel` | `TunnelManager.startIfConfigured/start/stop/restart` + `TunnelStateProvider.tunnelState/authUrl` | 状态机 `Disconnected→Starting→(Authorizing→)Connected｜Error`；**无 key 就保持 Disconnected**（公网照常）；失败一律转 `TunnelState.Error`，不抛到 UI |
-| **C-06** | 本地代理 + PAC | `:core:tunnel` / `app.core.tunnel` | `LocalProxyServer.start/stop` + `PacGenerator.build`（`/proxy.pac`，代理在 `127.0.0.1:1080`） | 只监听本地端口，**不得设 JVM 全局代理属性**；只 CONNECT 转发**不解密 TLS**；node 为空时 tailnet 目标返回 503、其余直连；PAC 必须带 `; DIRECT` 回退 |
-| **C-07** | 浏览器底座 | `:feature:browser` / `app.feature.browser` | `GeckoRuntimeProvider.get(context)` + `BrowserScreen(initialUrl, onUrlConsumed)` | GeckoRuntime **单例**；WebView 宿主用 `AndroidView` + `setSession`；只允许 http/https；**不做 JS bridge**；扩展浏览器能力只能用引擎 / Mozilla 组件 |
-| **C-08** | 内网导航页 | `:feature:home` / `app.feature.home` | `HomeScreen(servicesStore, onOpenService)` | **只读**，不给 CRUD 入口；分组来自 `group`，缺省「未分组」，组内保持 YAML 顺序；点击只交 URL，不内嵌 WebView |
-| **C-09** | 设置页 | `:feature:settings` / `app.feature.settings` | `SettingsScreen(onBack, viewModel)` | 必须能完成授权 / 断开 / 清凭据 / 清单导入导出 / 隧道开关 / 主题；隧道状态**直取 C-05**；清凭据 = **先停隧道再清凭据** |
-
-### 8.1 PAC 路由规则（唯一事实源）
-
-| 目标 | 返回 |
-| --- | --- |
-| `100.64.0.0/10` | `PROXY 127.0.0.1:1080; DIRECT` |
-| `*.ts.net` | `PROXY 127.0.0.1:1080; DIRECT` |
-| 单段主机名（MagicDNS 短名） | `PROXY 127.0.0.1:1080; DIRECT` |
-| 其余（公网 / LAN） | `DIRECT` |
-
-### 8.2 数据与配置格式
-
-**内网服务清单（YAML，存进 DataStore preferences 的单个 string key）**
-
-```yaml
-version: 1
-services:
-  - title: Jellyfin
-    url: https://jellyfin.tailnet-xyz.ts.net
-    icon: "🎬"
-    group: 媒体
-```
-
-- 解析用 kaml（kotlinx.serialization）；只接受 `http://` / `https://`；`version` 缺省 1；未知字段忽略。
-- `group` 缺省「未分组」；允许 MagicDNS 短名（`http://jellyfin:8096`）由隧道代理端解析。
-
-**App 设置（DataStore preferences）**
-
-| 键 | 默认 | 说明 |
-| --- | --- | --- |
-| `theme_preference` | `system` | 跟随系统 / 浅色 / 深色 |
-| `auto_connect_tunnel` | `true` | 启动时自动连隧道 |
-| `open_home_on_launch` | `true` | 启动时先显示内网导航页 |
-| `use_tailnet_proxy` | `true` | 是否让浏览器走 PAC（关掉则全直连） |
+| 项目文档区 `docs/design.md`、`todo.md` | 权威设计方案、进展待办 | **技术负责人**（其他线只读；要改先留言） |
 
 ### 8.3 契约变更流程
 
 | 级别 | 定义 | 流程 |
 | --- | --- | --- |
 | **A 级**（非破坏性） | 新增方法 / 新增带默认值的字段 / 新增带默认值的可选参数 / 文案微调 | 线负责人**可直接实现**，但要在任务下留一条告知评论（写明契约编号 + 前后对比） |
-| **B 级**（破坏性） | 改签名 / 改返回值类型 / 改默认值 / 删字段 / 改枚举取值 / 改语义 / 改模块归属 | **必须**走四步：① 提案（契约编号 + 现状→期望签名 + 影响面 + 迁移方案）② 技术负责人回复「批准（CHG-xxx）」（**没有「批准（CHG-xxx）」字样不算批准**）③ 所有者实现，commit 带 `契约 CHG-xxx`，旧签名保留一个迭代（`@Deprecated`）④ 留「契约已变更」评论，技术负责人在 `contracts.md` §8 追加一行 |
+| **B 级**（破坏性） | 改签名 / 改返回值类型 / 改默认值 / 删字段 / 改枚举取值 / 改语义 / 改模块归属 | **必须**走四步：① 提案（契约编号 + 现状→期望签名 + 影响面 + 迁移方案）② 技术负责人回复「批准（CHG-xxx）」（**没有「批准（CHG-xxx）」字样不算批准**）③ 所有者实现，commit 带 `契约 CHG-xxx`，旧签名保留一个迭代（`@Deprecated`）④ 留「契约已变更」评论，技术负责人在 `design.md` §4.12 追加一行 |
 
 **速查**：给 `AppSettings` 加带默认值字段 = A；改 `TunnelState` 字段集合 / 改 PAC 路由规则 / 改 `parse` 拒绝策略 / 改状态机 / 加模块 = B。
-`:core:model`（契约本体）与 `contracts.md` 本身只有技术负责人能改。
+`:core:model`（契约本体）与 `design.md` 本身只有技术负责人能改。
+完整流程见 `design.md` §4.11。
 
-## 9. 技术栈与工具链
-
-| 层 | 选型 |
-| --- | --- |
-| 语言 / 构建 | Kotlin 2.2.21 / AGP 8.12.0 / Gradle 8.13 / Version Catalog |
-| UI | Jetpack Compose + Material 3；ViewModel + StateFlow |
-| 浏览器 | GeckoView 147.0.20260212191108（Firefox 引擎，MPL-2.0） |
-| 隧道 | `com.klethron:tsnet:0.14.0`（userspace 节点）+ 自建本地 HTTP 代理 |
-| 存储 | DataStore preferences（设置 / 清单 / 书签）+ Android Keystore（凭据） |
-| YAML / 序列化 | kaml / kotlinx.serialization |
-| DI | Hilt 2.56.2（走 KSP，不用 kapt） |
-| 测试 | JUnit + kotlinx-coroutines-test + Compose UI Test |
-
-**版本为什么锁这一组**（改动前先想清楚，别随手升）
-
-| 组件 | 版本 | 约束 |
-| --- | --- | --- |
-| Kotlin | 2.2.21 | 2.3.x 的 metadata（2.3.0）超出 Hilt 2.56.2 支持上限（2.2.0） |
-| KSP | 2.2.21-2.0.5 | 必须与 Kotlin 同版本；Hilt 走 KSP |
-| Hilt | 2.56.2 | 2.60+ 要求 AGP 9.0 |
-| AGP | 8.12.0 | KSP 2.3+ 要求 AGP ≥ 8.12 |
-| Gradle | 8.13 | AGP 8.12 要求 ≥ 8.13 |
-| GeckoView | 147 | 148+ 用 Kotlin 2.3 metadata，与上面冲突 |
-
-> KSP 与 Hilt 插件必须**声明在同一作用域**（root `build.gradle.kts` 里都 `apply false`），否则 Gradle 报 "KSP plugin … task class could not be found"。
-
----
----
-
-# 第三部分 · 重要注意事项（别踩这些坑）
-
-## 10. 风险与红线
-
-### 10.1 安全姿态（红线）
-
-- **不终止 TLS**：代理只做 CONNECT 转发，App 看不到明文；但 App **确实在流量路径上** → 「关于」里写清楚。
-- **不存密码**：引擎的密码保存能力不主动开启。
-- **auth key 不落明文**：Keystore AES-256-GCM；不导出任何含 key 的文件；一键清除。
-- **权限最小**：只申请 `INTERNET` + `ACCESS_NETWORK_STATE`；**不申请** VPN / 定位 / 存储。
-- 数据全本地：无遥测、无账号、无服务器。
-
-### 10.2 构建与磁盘
-
-- `gradle.properties` 已配 `-Xmx2560m` / `-XX:MaxMetaspaceSize=768m`（GeckoView 的 dex 合并需要 ≥2.5G 堆，1G 会 OOM）；本机 5.8GB RAM / 2 核。
-- **磁盘不足时只清**：`android/**/build`、`.build-logs/`、Gradle 缓存里可重建的部分。
-- **禁止删除**：平台 CLI 目录 `~/.paperclip/cli`（≈3GB）与 Hermes 工具链 `~/.hermes`（≈2.9GB）—— 删了会毁掉本机环境。
-- `~/.cache/hubdeck-toolchain` 已于 2026-11-13 删除（≈11GB），**不得恢复**。
-
-### 10.3 工程坑
-
-- **GeckoView 无公开代理 API** → G-1 接线可能踩坑；备选顺序：引擎偏好 → `GeckoSessionSettings` 代理配置 → 必要时退回「本地代理 + 系统浏览器打开」。
-- **与官方 Tailscale App 双开可能互相干扰 MagicDNS** → 清单里优先写 FQDN 或 `100.x` IP，**不用短名**；错误文案引导。
-- **Private DNS（DoH）开启时 MagicDNS 查询被拦** → 同上，清单写 FQDN / IP，文案引导关闭。
-- **userspace 转发慢于内核 TUN** → 只承诺「面板类访问」；大文件建议用系统 App。
-- **文档与代码会漂移** → 每次里程碑收口做一次「文档 ↔ 代码」核对；契约变更必须升版。
-
-## 11. 真机验收基线（V1–V7）
-
-> 验收项与预期基本不变；**每条的当前状态在 `todo.md`**。
-
-| # | 验证项 | 预期 |
-| --- | --- | --- |
-| V1 | **内网地址在 App 内浏览器打开**（核心） | 页面正常加载，流量经 `127.0.0.1:1080` |
-| V2 | 公网不受影响 | 正常加载（PAC `DIRECT` 回退） |
-| V3 | 隧道断开后浏览器仍可用 | 公网正常，内网给明确错误 |
-| V4 | Private DNS 影响 | 记录失败模式并优化文案 |
-| V5 | 授权流程 | 外部浏览器授权后回 App 自动连上 |
-| V6 | 包体 / 冷启动 / 隧道启动耗时 | 对照阈值给数字（包体 +25MB / 冷启动 +150ms） |
-| V7 | 转发性能边界 | 与系统 TUN 的差距有量化结论 |
-
----
----
-
-# 第四部分 · 引用文档（长尾在文档区）
-
-## 12. 文档索引
-
-**统一存放**（不进代码仓库，由技术负责人维护，其他线只读）：
-
-```
-/home/jack/project-2611-docs/
-├── todo.md            ← 进展与待办（当前阶段 / 未闭合项 / M1 清单 / 待拍板 / 验收状态）
-└── docs/
-    ├── design.md      ← 设计正本（ADR 全文、功能范围、风险登记册、附录 C）
-    ├── contracts.md   ← 冻结契约完整签名、变更流程全文、变更记录 CHG-xxx
-    ├── plan.md        ← 里程碑 M0–M4 全文、验收证据规范
-    ├── delivery.md    ← 交付口径、设备通道手册、磁盘纪律
-    └── incidents/     ← 事故复盘（G0–G9 门禁）
-```
-
-| 我要查什么 | 看哪份哪一节 |
-| --- | --- |
-| **当前进展 / 待办 / 决策状态** | **`todo.md`** |
-| 产品定义、目标 / 非目标、ADR 全文与被否决方案、附录 C（Tailscale 能力盘点 / Android 平台限制 / V1–V7） | `docs/design.md` §1–§2、附录 C |
-| 模块结构、关键数据流（打开内网服务 / 隧道生命周期 / PAC 路由） | `docs/design.md` §3 |
-| 数据与配置格式、工具链版本矩阵、构建资源 | `docs/design.md` §4、§6.2–§6.3 |
-| 功能范围 P0/P1（F1–F10）、风险登记册 R1–R10、未决问题 | `docs/design.md` §5、§9–§10 |
-| 契约**完整签名**、每条契约的全部不变量、模块依赖细则、变更流程全文、变更记录 CHG-xxx、架构冲突 | `docs/contracts.md` §2–§9 |
-| 里程碑 M0–M4 全文、当前进度快照、风险执行版（含责任人）、决策待办 D1–D6 | `docs/plan.md` §1–§4 |
-| 验收证据规范：截图命名、logcat 截取、结论表、最小证据清单 | `docs/plan.md` §5 |
-| 本机环境与自检、交付工作流、证据口径、磁盘纪律 | `docs/delivery.md` §1–§5 |
-| 设备验收通道：A 真机 / B Limrun 云模拟器 / E CI 模拟器操作步骤 | `docs/delivery.md` §6 |
-| 事故复盘与 G0–G9 门禁 | `docs/incidents/2026-11-10-m1-hard-kill.md` §6 |
-
-**其它位置**
-
-| 位置 | 内容 |
-| --- | --- |
-| `/home/jack/project-2611-docs/`（根目录） | 任务级资料：PR 草稿、任务清单、抓取日志（见 §4.4） |
-| `/home/jack/project-2611-docs/archive-20261122/`、`archive-20261123/` | 历史快照（对齐前 / 四文档合并前），可追溯 |
-| `README.md`（仓库内） | 对外说明 + 文档索引 |
-
-> 源码注释与 `scripts/`、`.github/workflows/` 里出现的 `docs/X.md §N` 均指向上方文档区的同名文件；仓库内不再保留 `docs/` 目录。
-
-## 13. 角色职责速查
+## 9. 角色职责速查
 
 | 线 | 拥有 | 关键约束 |
 | --- | --- | --- |
@@ -439,7 +325,7 @@ services:
 > 每个角色的完整定义、证据要求、禁做清单见各自的角色说明文件（agent 级与 `instructions/` 级的 `AGENTS.md`）。
 > **当前各线的实际归属与空缺**（谁在接、谁没人接）看 `todo.md`。
 
-## 14. 引用方式
+## 10. 引用方式
 
 在各角色（agent 级与 `instructions/` 级）的 AGENTS.md 文件开头添加：
 

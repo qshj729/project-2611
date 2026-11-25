@@ -4,23 +4,23 @@
 在外面访问家里的内网服务，不再需要同时开「浏览器」和「Tailscale App」两个应用。
 
 > 工作名 **MyApps**（`applicationId = top.quup.myapps`，源码根包 `app`）。
-> 工程标识（`hubdeck.yaml` 等）暂时沿用旧名，见 `contracts.md` G-6。
+> 工程标识（`hubdeck.yaml` 等）暂时沿用旧名，见 `design.md` §4.13 G-6。
 
 ---
 
 ## 文档索引
 
-> **先读 [`AGENTS.md`](/home/jack/project-2611/AGENTS.md)** —— 共享规范唯一正本：开发规范、设计规范、重要注意事项、文档索引都在里面。
-> 设计与规范文档已迁出仓库，统一存放在项目文档区 `/home/jack/project-2611-docs/docs/`（见 `AGENTS.md` §12）。
+> **先读 [`AGENTS.md`](/home/jack/project-2611/AGENTS.md)** —— 工程说明书 + 权威文档索引：干活方式、红线、目录归属、交付口径、文档地图。
+> 权威文档只有两份，都在项目文档区 `/home/jack/project-2611-docs/`。
 
 | 文档 | 内容 |
 | --- | --- |
-| [`AGENTS.md`](/home/jack/project-2611/AGENTS.md) | **共享规范正本**：30 秒速览、开发规范（协作 / 工作区 / 构建 / 交付 / 纪律）、设计规范（产品 / ADR / 模块 / 契约 / 数据格式）、注意事项（当前阶段 / 遗留 G-1~G-10 / 风险红线 / 待拍板）、文档索引 |
-| [`design.md`](/home/jack/project-2611-docs/docs/design.md) | **设计正本（v2）**：产品定位、ADR-201 ~ ADR-204、瘦身后的模块结构、数据格式、现状与遗留、风险、附录 C（Tailscale 要点 + 真机验证清单 V1–V7） |
-| [`contracts.md`](/home/jack/project-2611-docs/docs/contracts.md) | **冻结契约与模块归属（v2.0）**：C-01 ~ C-09、模块归属表、依赖方向、变更流程、已知缺口 G-1 ~ G-10 |
-| [`plan.md`](/home/jack/project-2611-docs/docs/plan.md) | **计划与验收**：M0 ~ M4 里程碑、当前进度、风险执行表、待拍板决策、验收证据规范 |
-| [`delivery.md`](/home/jack/project-2611-docs/docs/delivery.md) | **交付与设备验收**：本地自检 + Actions 证据口径、设备通道（真机 / Limrun / CI 模拟器）、磁盘纪律 |
+| [`AGENTS.md`](/home/jack/project-2611/AGENTS.md) | **工程说明书 + 索引**：30 秒速览、开发规范（工作区 / 构建 / 交付 / 纪律）、注意事项（红线 / 坑 / 验收基线）、文档地图、目录归属、契约变更流程、角色职责 |
+| [`design.md`](/home/jack/project-2611-docs/docs/design.md) | ★ **应用设计方案（权威）**：产品定位与目标、ADR-201 ~ ADR-204、模块结构与依赖方向、**冻结契约 C-01 ~ C-09（含完整签名与不变量）**、数据与配置格式、功能范围与质量保障、交付与验收口径（含设备通道）、里程碑 M0 ~ M4、风险登记册 R1 ~ R10、附录（Tailscale 能力盘点 / 平台限制 / V1–V7） |
+| [`todo.md`](/home/jack/project-2611-docs/todo.md) | **进展与待办**：当前阶段、未闭合项 G-1 ~ G-10、M1 收口清单、待拍板 D1 ~ D6、真机验收状态 |
 | [`incidents/`](/home/jack/project-2611-docs/docs/incidents/) | 事故复盘与 G0–G9 门禁 |
+
+> 原 `design.md` / `contracts.md` / `plan.md` / `delivery.md` 四份文档已于 2026-11-25 合并为单一的 `design.md`，旧版留档在 `archive-20261125/pre-merge-4-docs/`。
 
 ---
 
@@ -75,7 +75,7 @@ bash scripts/local-build.sh --no-apk # 跳过打包，快一些
 
 ---
 
-## 已知缺口（详见 `contracts.md` §4）
+## 已知缺口（详见 `design.md` §4.13）
 
 | 编号 | 问题 |
 | --- | --- |
@@ -92,5 +92,5 @@ bash scripts/local-build.sh --no-apk # 跳过打包，快一些
 
 1. **M1-1.1**：把 PAC 接到 GeckoView（决定这个 App 到底能不能替代两个 App）。
 2. **M1-1.2**：用引擎能力补齐标签 / 书签 / 下载 / 历史 / 无痕（不自造浏览器）。
-3. 真机 + 真实 tailnet 走一遍通道 A 验收（`delivery.md` §6.2 + `design.md` 附录 C.3 的 V1–V7）。
-4. M3：tsnet 依赖评估 + 包体 / 冷启动基准（`plan.md` §1 M3）。
+3. 真机 + 真实 tailnet 走一遍通道 A 验收（`design.md` §7.6.2 通道 A + §11.4 的 V1–V7）。
+4. M3：tsnet 依赖评估 + 包体 / 冷启动基准（`design.md` §8 M3）。
