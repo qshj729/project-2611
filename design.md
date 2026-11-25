@@ -3,7 +3,7 @@
 > **定位**：本项目**唯一的设计权威文档**。产品形态、架构决策、模块结构、冻结契约、数据格式、里程碑、交付与验收口径，全部在这里。
 > **入口**：`AGENTS.md`（同目录）—— 工程说明书与本文件的索引（读哪一节、怎么改、归谁管）。
 > **状态**：`todo.md`（同目录，只存本地、不入版本库）—— 当前进展、未闭合项、决策待办、验收状态（会变的东西）。
-> **维护**：技术负责人（Kai）维护；其他线只读，要改先留言。
+> **维护**：技术负责人维护；其他线只读，要改先留言。
 > **位置**：本文件在仓库根，随代码进仓；事故复盘（`incidents/`）与验收截图（`shots/`）仍在项目文档区 `/home/jack/project-2611-docs/docs/`。
 > **替代**：本文件整合自原 `design.md` / `contracts.md` / `plan.md` / `delivery.md` 四份文档（2026-11-25 合并），旧文件不再被引用。
 
@@ -673,7 +673,7 @@ bash scripts/local-build.sh --no-apk   # 只编译 + 单测 + Lint（更快）
 ⑨ 任务评论贴：Actions run 链接 + artifact 名 + 一句话结论
 ```
 
-**跨线提交**：一次提交只动一条线的目录（守卫会拦）。确实需要跨线（例如架构级收口）时，由 CEO 用 `HUB_DECK_ALLOW_CROSS_MODULE=1 git commit ...`。
+**跨线提交**：一次提交只动一条线的目录（守卫会拦）。确实需要跨线（例如架构级收口）时，由项目负责人用 `HUB_DECK_ALLOW_CROSS_MODULE=1 git commit ...`。
 
 ### 7.4 证据口径
 
@@ -713,7 +713,7 @@ bash scripts/local-build.sh --no-apk   # 只编译 + 单测 + Lint（更快）
 
 | 通道 | 工具侧 | 外部依赖 | 状态 |
 | --- | --- | --- | --- |
-| **A. 真机 adb** | ✅ adb / platform-tools 已装 | 一台开启 USB / 无线调试的 Android 14+ 设备 | 🟡 **主设备通道**：由老板接真机，操作走 `scripts/device-session.sh` |
+| **A. 真机 adb** | ✅ adb / platform-tools 已装 | 一台开启 USB / 无线调试的 Android 14+ 设备 | 🟡 **主设备通道**：由人工接真机，操作走 `scripts/device-session.sh` |
 | **B. Limrun 云模拟器** | ✅ `lim` CLI 已装 | Limrun 账号 + API key | ❌ **缺凭据**（`lim android list` 报 `Not authenticated`） |
 | **C. 无设备** | ✅ GitHub Actions | 无 | ✅ **可用**：单测 + Lint + APK 产出全部在 CI |
 | **D. 本地 AVD** | ❌ 已下线（2026-11-13） | — | ⛔ **不再使用**（本机不编译、不起模拟器） |

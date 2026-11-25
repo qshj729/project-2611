@@ -7,7 +7,7 @@
 >
 > 原 `design.md` / `contracts.md` / `plan.md` / `delivery.md` 四份文档已合并进 `design.md`（2026-11-25），**不再单独存在、不再被引用**。
 > **冲突裁决**：本文件（干活方式）> `design.md`（怎么设计）> `todo.md`（做到哪）。
-> **维护**：共享规范只在本文件维护，**只有技术负责人（Kai）能改**；角色文件只写自己独有的部分，不复制共享内容。
+> **维护**：共享规范只在本文件维护，**只有技术负责人能改**；角色文件只写自己独有的部分，不复制共享内容。
 > **本文件只写「基本不变」的东西**（规范 / 索引 / 红线）；进展、待办、决策状态一律在 `todo.md`。
 
 **目录**
@@ -68,7 +68,7 @@
 
 - **只 `git add` 自己负责的目录**（路径级 add）；禁止 `git add -A` / `git add .` / `git checkout .` / `git reset --hard`。
 - 一次提交只动一条线的目录；共享仓库的 pre-commit 守卫会拦跨线提交。
-- 确实需要跨线（架构级收口）：由 CEO 用 `HUB_DECK_ALLOW_CROSS_MODULE=1 git commit ...`。
+- 确实需要跨线（架构级收口）：由项目负责人用 `HUB_DECK_ALLOW_CROSS_MODULE=1 git commit ...`。
 - 提交信息用中文：`feat(data): ...` / `feat(ui): ...` / `feat(network): ...` / `fix(build): ...` / `chore(build): ...` / `design(tokens): ...` / `docs(repo): ...`。
 - 契约变更的 commit 必须带 `契约 CHG-xxx`（见 §8.3）。
 
@@ -319,12 +319,15 @@ App 启动 → TunnelManager.startIfConfigured()
 
 | 线 | 拥有 | 关键约束 |
 | --- | --- | --- |
-| **技术负责人（Kai）** | 架构、模块边界、契约裁决、发布就绪判断 | 不写实现代码；不擅自改已公示契约 |
-| **数据线（Reed）** | `:core:data`：YAML 清单 / DataStore 设置 / Keystore 凭据 | 不改 `core:tunnel`、`feature/*`；不写真实凭据 |
-| **网络线（Vela）** | `:core:tunnel`：tsnet 节点 / 本地代理 / PAC | 不做流量中间人解密；不存 VPN 凭据 |
+| **技术负责人** | 架构、模块边界、契约裁决、发布就绪判断 | 不写实现代码；不擅自改已公示契约 |
+| **数据线** | `:core:data`：YAML 清单 / DataStore 设置 / Keystore 凭据 | 不改 `core:tunnel`、`feature/*`；不写真实凭据 |
+| **网络线** | `:core:tunnel`：tsnet 节点 / 本地代理 / PAC | 不做流量中间人解密；不存 VPN 凭据 |
 | **界面线** | `:feature/*`：浏览器底座 / 导航页 / 设置页 | 不自造浏览器能力；不在 App 内做 JS bridge |
-| **工程线（Juno）** | CI、Gradle、测试基线、APK 产出 | 不把「CI 验证不了」写成「已通过」 |
-| **设计（Iris）** | 设计令牌、组件规范、交互流程、无障碍标注 | 不写 Compose 实现代码；令牌变更需 Kai 评技术可行性 |
+| **工程线** | CI、Gradle、测试基线、APK 产出 | 不把「CI 验证不了」写成「已通过」 |
+| **设计线** | 设计令牌、组件规范、交互流程、无障碍标注 | 不写 Compose 实现代码；令牌变更需技术负责人评技术可行性 |
+
+> 各线的划分依据是**模块归属**（见 §8.2），与具体由谁承担无关 —— 换人、并行、增员都不影响这些边界。
+> 每个角色的完整定义、证据要求、禁做清单见各自的角色说明文件（agent 级与 `instructions/` 级的 `AGENTS.md`）。
 
 > 每个角色的完整定义、证据要求、禁做清单见各自的角色说明文件（agent 级与 `instructions/` 级的 `AGENTS.md`）。
 > **当前各线的实际归属与空缺**（谁在接、谁没人接）看 `todo.md`。
@@ -341,4 +344,4 @@ App 启动 → TunnelManager.startIfConfigured()
 共享的工作区 / 交付 / 设计规范一律以正本为准，不要在本文件里复制。
 ```
 
-**共享规范只在本文件维护，只有技术负责人（Kai）能改**；改了共享规范 → 只改本文件 → 同步各角色文件顶部的引用块。
+**共享规范只在本文件维护，只有技术负责人能改**；改了共享规范 → 只改本文件 → 同步各角色文件顶部的引用块。
