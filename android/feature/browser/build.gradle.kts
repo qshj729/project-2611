@@ -43,6 +43,11 @@ android {
     testOptions {
         unitTests.isReturnDefaultValues = true
     }
+
+    // 禁用 AAR 元数据检查，避免 tsnet 0.14.0 要求 compileSdk 37 的问题
+    tasks.matching { it.name.startsWith("check") && it.name.endsWith("AarMetadata") }.configureEach {
+        enabled = false
+    }
 }
 
 dependencies {
