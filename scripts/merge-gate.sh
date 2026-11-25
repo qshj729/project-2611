@@ -74,7 +74,7 @@ fi
 API="https://api.github.com"
 AUTH=(-H "Authorization: Bearer $TOKEN" -H "Accept: application/vnd.github+json")
 
-# git 可能由 root 跑、仓库属 jack → 触发 dubious ownership，一律放宽
+# git 可能由 root 跑、仓库属其他用户 → 触发 dubious ownership，一律放宽
 git_() { git -c safe.directory='*' -C "$REPO_ROOT" "$@" 2>/dev/null || true; }
 
 # ---------------------------------------------------------------- repo

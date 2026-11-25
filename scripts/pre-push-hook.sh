@@ -17,7 +17,7 @@ if [ ! -f "$REPO_ROOT/scripts/local-build.sh" ]; then
   exit 0
 fi
 
-# git 可能由 root 跑、仓库属 jack → 触发 dubious ownership，一律放宽
+# git 可能由 root 跑、仓库属其他用户 → 触发 dubious ownership，一律放宽
 git_() { git -c safe.directory='*' -C "$REPO_ROOT" "$@" 2>/dev/null; }
 
 # pre-push 的 stdin：<local ref> <local sha> <remote ref> <remote sha>

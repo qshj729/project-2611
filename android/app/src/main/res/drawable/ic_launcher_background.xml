@@ -2,7 +2,7 @@
 <!--
   MyApps 图标背景层（自适应图标 background）。
   品牌基调：深海军蓝 → 青绿渐变，代表「从外网进入内网」。
-  本文件由 CEO 于 CMP-50 预置为可用的兜底素材；Designer 交付正式稿后可直接替换。
+  本文件由项目负责人于 CMP-50 预置为可用的兜底素材；Designer 交付正式稿后可直接替换。
 -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:aapt="http://schemas.android.com/aapt"

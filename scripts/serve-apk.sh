@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# 把 debug APK 通过局域网 HTTP 暴露给老板的手机直接下载安装。
+# 把 debug APK 通过局域网 HTTP 暴露给自己的手机直接下载安装。
 #
 # 用法:
 #   scripts/serve-apk.sh                       # 默认 8099 端口、120 分钟窗口

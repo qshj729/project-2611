@@ -3,7 +3,7 @@
   MyApps 图标前景层（自适应图标 foreground）。
   图形：字母 M 落在 tailnet 环里 —— M = MyApps，环 = 内网隧道。
   画布 108x108，内容全部落在中心 72dp 安全圆内（半径 33）。
-  本文件由 CEO 于 CMP-50 预置为可用的兜底素材；Designer 交付正式稿后可直接替换。
+  本文件由项目负责人于 CMP-50 预置为可用的兜底素材；Designer 交付正式稿后可直接替换。
 -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp"

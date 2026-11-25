@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # HubDeck 本地编译检查入口。
 #
-# 定位（2026-11-18 老板决策：本地要尽量检查好，再提交）：
+# 定位（2026-11-18 负责人决策：本地要尽量检查好，再提交）：
 #   本地做「提交前自检」——编译 + 单测 + Lint，并顺带产出 debug APK，
 #   供真机（通道 A）直接安装验证，省掉「CI 构建 → 下载 artifact」这一轮。
 #
@@ -29,8 +29,8 @@ set -uo pipefail
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$REPO_ROOT"
 
-# HOME 在 sudo 下可能未设置，兜底用 jack 的 home
-HOME="${HOME:-/home/jack}"
+# HOME 在 sudo 下可能未设置，兜底用当前用户的 home
+HOME="${HOME:-/home/$(id -un)}"
 export HOME
 
 log() { printf '→ %s\n' "$*"; }

@@ -27,7 +27,7 @@
 | --- | --- |
 | 产品 | **MyApps**：给 GeckoView（Firefox 引擎）**套上 Tailscale** 的自用安卓浏览器 —— 一个 App 顶「浏览器 + Tailscale App」两个 |
 | 形态 | Kotlin + Compose，minSdk 34 / targetSdk 35，`applicationId = top.quup.myapps`，源码根包 `app`；**自用不上架**，无账号、无服务器、无遥测 |
-| 仓库 | `/home/jack/project-2611`（`android/` 是 Gradle 工程），远端 `github.com/qshj729/hubdeck` |
+| 仓库 | `~/hubdeck`（`android/` 是 Gradle 工程），远端 `github.com/qshj729/hubdeck-android` |
 | 模块 | 8 个：`:app` + `:core:model` / `:core:data` / `:core:tunnel` + `:feature:browser` / `:feature:home` / `:feature:settings` + `:benchmark` |
 | 依赖方向 | `:core:model` ← `:core:data` `:core:tunnel` ← `:feature:*` ← `:app`（只往下，无环） |
 | 方案在哪 | **应用设计方案 = 仓库根 `design.md`**（ADR / 契约 / 数据格式 / 交付口径 / 里程碑 / 风险） |
@@ -50,17 +50,17 @@
 
 ### 1.1 工作区
 
-- **唯一权威工作区** = `/home/jack/project-2611`（代码唯一正本）。直接在这里改代码、提交。
+- **唯一权威工作区** = `~/hubdeck`（代码唯一正本）。直接在这里改代码、提交。
 - **每个任务有自己的 git worktree**（分支隔离、互不污染）；在权威工作区或自己的 worktree 里正常作业。
 - **不要** `git init` / 重新克隆 / `git checkout .` / `git reset --hard` 别人的改动。
 - 开工前先跑 `git status` 与 `git log --oneline -3`，确认没有别人的未提交改动。
-- 远端 `https://github.com/qshj729/hubdeck.git`；**push 前确认任务是否授权推远端**。
+- 远端 `https://github.com/qshj729/hubdeck-android.git`；**push 前确认任务是否授权推远端**。
 
 ### 1.2 本机环境（每个新 shell 先确认）
 
-- Bash 工具环境里 **`$HOME` 默认可能为空** → 先 `export HOME=/home/jack` 再跑 git。
+- Bash 工具环境里 **`$HOME` 默认可能为空** → 先 `export HOME="/home/$(id -un)"` 再跑 git。
 - 首次遇到 `fatal: detected dubious ownership` → 一次性执行
-  `git config --global --add safe.directory /home/jack/project-2611`。
+  `git config --global --add safe.directory ~/hubdeck`。
 - 本机有 JDK 17（`~/tools/jdk17`）、Android SDK 35（`~/Android/Sdk`）、Gradle 缓存（`~/.gradle`）；
   **不要**再装第二份 JDK / SDK / system-image，**不要**起本地模拟器。
 
@@ -116,13 +116,13 @@ bash scripts/local-build.sh --no-apk   # 只编译 + 单测 + Lint（更快）
 ### 2.4 绿色构建会骗人
 
 模块 `NO-SOURCE` 也是绿的。收口前必须确认目标模块 `compileDebugKotlin` **有命中行**，
-并按 `/home/jack/project-2611-docs/docs/incidents/2026-11-10-m1-hard-kill.md` §6 的 **G1–G9 逐条**给「通过 / 不通过 + 证据」。
+并按 `~/hubdeck-docs/docs/incidents/2026-11-10-m1-hard-kill.md` §6 的 **G1–G9 逐条**给「通过 / 不通过 + 证据」。
 
 ### 2.5 验收结论写法
 
 - 结果只允许三种：`✅ 通过` / `❌ 失败`（附错误输出）/ `⛔ 待验证`（写明阻塞项与解除条件）。**只记录真跑出来的**。
 - 每条验收至少齐四样：复现命令 / 实际输出（原文不改写）/ 界面或日志证据 / 设备信息。
-- 截图命名：`/home/jack/project-2611-docs/docs/shots/<验收项编号>-<场景>-<序号>.png`（如 `1.1-inner-web-01.png`）；截图与 APK **不提交进仓库**。
+- 截图命名：`~/hubdeck-docs/docs/shots/<验收项编号>-<场景>-<序号>.png`（如 `1.1-inner-web-01.png`）；截图与 APK **不提交进仓库**。
 - 完整验收证据规范（截图命名细则 / logcat 截取 / 结论表格式 / 设备通道手册）见 `design.md` §7.7 与 §7.6。
 
 ## 3. 交付流程（九步）
@@ -148,7 +148,7 @@ bash scripts/local-build.sh --no-apk   # 只编译 + 单测 + Lint（更快）
    - 不在代码、测试夹具或文档里写真实凭据；
    - 不擅自改动已公示的实体字段语义；
    - 不本地打 release APK、不下载 JDK / SDK / system-image、不起本地模拟器；
-   - 不把任务个人工作文件（任务清单 / todos / 草稿 / 抓取日志等）写进代码仓库 —— 统一落到项目文档区 `/home/jack/project-2611-docs`，并在 `.gitignore` 加忽略项兜底（工作区元数据目录、`logs.zip` 等）。
+   - 不把任务个人工作文件（任务清单 / todos / 草稿 / 抓取日志等）写进代码仓库 —— 统一落到项目文档区 `~/hubdeck-docs`，并在 `.gitignore` 加忽略项兜底（工作区元数据目录、`logs.zip` 等）。
 5. **阻塞与升级**：真阻塞要写明**阻塞原因 + owner + 下一步**；需要跨角色配合时提前留言给对应 owner，别硬扛。
 6. **沟通**：中文思考与回复；结论先行，不贴裸日志或工具输出残渣；超长内容写进任务文档。
 7. **共享规范归属**：只在本文件维护，只有技术负责人能改；角色文件不复制共享内容。
@@ -173,7 +173,7 @@ bash scripts/local-build.sh --no-apk   # 只编译 + 单测 + Lint（更快）
 
 - `gradle.properties` 已配 `-Xmx2560m` / `-XX:MaxMetaspaceSize=768m`（GeckoView 的 dex 合并需要 ≥2.5G 堆，1G 会 OOM）；本机 5.8GB RAM / 2 核。
 - **磁盘不足时只清**：`android/**/build`、`.build-logs/`、Gradle 缓存里可重建的部分。
-- **禁止删除**：`~/.paperclip/cli`（≈3GB）、`~/.hermes`（≈2.9GB）—— 平台 CLI 与 Hermes 工具链。
+- **禁止删除**：平台 CLI 缓存目录（≈3GB）、`~/.hermes`（≈2.9GB）—— 平台 CLI 与 Hermes 工具链。
 - `~/.cache/hubdeck-toolchain` 已于 2026-11-13 删除（≈11GB），**不得恢复**。
 
 ### 5.3 工程坑
@@ -240,14 +240,14 @@ App 启动 → TunnelManager.startIfConfigured()
 ## 8. 文档地图
 
 ```
-/home/jack/project-2611/                ← 代码仓库根
+~/hubdeck/                       ← 代码仓库根
 ├── AGENTS.md                           ← 本文件：工程说明书 + 权威文档索引
 ├── design.md                           ← ★ 应用设计方案（权威正本，随代码进仓）
 ├── todo.md                             ← 进展与待办（只存本地，.gitignore 已忽略）
 ├── android/                            ← Gradle 工程
 └── README.md                           ← 对外说明
 
-/home/jack/project-2611-docs/           ← 项目文档区（不进代码仓库）
+~/hubdeck-docs/                  ← 项目文档区（不进代码仓库）
 ├── docs/incidents/                     ← 事故复盘（G0–G9 门禁）
 ├── docs/shots/                         ← 设备验收截图（不进仓库）
 ├── archive-*/                          ← 历史快照，可追溯
@@ -276,7 +276,7 @@ App 启动 → TunnelManager.startIfConfigured()
 | 仓库对外说明 | 仓库内 `README.md` |
 
 > **旧文档说明**：原 `design.md`（产品/ADR/模块）、`contracts.md`（契约）、`plan.md`（里程碑/验收）、`delivery.md`（交付/设备）四份已合并为单一的 `design.md`（2026-11-25）。
-> 旧版本留档在 `/home/jack/project-2611-docs/archive-20261125/pre-merge-4-docs/`。**源码注释与脚本里出现的 `design.md §N` 均指仓库根的 `design.md`**；`docs/contracts.md`、`docs/plan.md`、`docs/delivery.md` 已不存在。
+> 旧版本留档在 `~/hubdeck-docs/archive-20261125/pre-merge-4-docs/`。**源码注释与脚本里出现的 `design.md §N` 均指仓库根的 `design.md`**；`docs/contracts.md`、`docs/plan.md`、`docs/delivery.md` 已不存在。
 
 ### 8.2 目录归属表（谁能直接改）
 
@@ -338,7 +338,7 @@ App 启动 → TunnelManager.startIfConfigured()
 
 ```markdown
 # 引用项目共享规范
-见：`/home/jack/project-2611/AGENTS.md`（唯一正本，随代码进仓）
+见：`~/hubdeck/AGENTS.md`（唯一正本，随代码进仓）
 
 本文件仅包含该角色**独有**的职责、完成定义、禁做清单与参考文档；
 共享的工作区 / 交付 / 设计规范一律以正本为准，不要在本文件里复制。

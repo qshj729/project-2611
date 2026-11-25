@@ -159,7 +159,7 @@ class SettingsViewModel @Inject constructor(
     }
 
     fun openOpenSourceLicenses() {
-        val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/qshj729/hubdeck/blob/main/LICENSE"))
+        val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/qshj729/hubdeck-android/blob/main/LICENSE"))
         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         context.startActivity(intent)
     }
@@ -544,7 +544,7 @@ private fun AboutCard(
                     onClick = {
                         val intent = Intent(
                             Intent.ACTION_VIEW,
-                            Uri.parse("https://github.com/qshj729/hubdeck"),
+                            Uri.parse("https://github.com/qshj729/hubdeck-android"),
                         )
                         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                         context.startActivity(intent)

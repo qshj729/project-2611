@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # HubDeck 构建环境（CI 优先）
 #
-# 2026-11-13 CEO / 老板决策：**本地编译环境已下线**。
+# 2026-11-13 负责人决策：**本地编译环境已下线**。
 #   - 本机不再安装 JDK / Android SDK / Gradle 缓存（~/.cache/hubdeck-toolchain 已删除）。
 #   - 所有构建、单测、Lint、界面截图一律在 GitHub Actions 上跑：
 #       .github/workflows/ci.yml         —— 构建 + 单测 + Lint（PR 与 main push）

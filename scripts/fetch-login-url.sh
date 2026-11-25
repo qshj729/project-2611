@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# 从 logcat 里捞出 tsnet 节点的浏览器授权链接，交给老板点一下。
+# 从 logcat 里捞出 tsnet 节点的浏览器授权链接，交给用户点一下。
 #
 # 用法:
 #   scripts/fetch-login-url.sh              # 读当前 adb 设备的 logcat 缓冲区
