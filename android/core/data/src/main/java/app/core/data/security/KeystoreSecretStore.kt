@@ -21,7 +21,7 @@ import javax.crypto.spec.GCMParameterSpec
  * - 删 App 数据 / 卸载即失效；
  * - **不再使用明文 SharedPreferences**（v1 的 `TunnelProvider` 曾经这么做）。
  *
- * 设计参考：AGENTS.md §8（C-04 凭据）/ contracts.md C-04
+ * 设计参考：design.md §4.5（C-04 凭据）
  */
 class KeystoreSecretStore(
     private val context: Context,
