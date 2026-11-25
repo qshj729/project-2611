@@ -27,7 +27,7 @@
 | --- | --- |
 | 产品 | **MyApps**：给 GeckoView（Firefox 引擎）**套上 Tailscale** 的自用安卓浏览器 —— 一个 App 顶「浏览器 + Tailscale App」两个 |
 | 形态 | Kotlin + Compose，minSdk 34 / targetSdk 35，`applicationId = top.quup.myapps`，源码根包 `app`；**自用不上架**，无账号、无服务器、无遥测 |
-| 仓库 | `~/project-2611`（`android/` 是 Gradle 工程），远端 `github.com/qshj765/project-2611` |
+| 仓库 | `~/project-2611`（`android/` 是 Gradle 工程），远端 `github.com/qshj729/project-2611` |
 | 模块 | 8 个：`:app` + `:core:model` / `:core:data` / `:core:tunnel` + `:feature:browser` / `:feature:home` / `:feature:settings` + `:benchmark` |
 | 依赖方向 | `:core:model` ← `:core:data` `:core:tunnel` ← `:feature:*` ← `:app`（只往下，无环） |
 | 方案在哪 | **应用设计方案 = 仓库根 `design.md`**（ADR / 契约 / 数据格式 / 交付口径 / 里程碑 / 风险） |
@@ -54,7 +54,7 @@
 - **每个任务有自己的 git worktree**（分支隔离、互不污染）；在权威工作区或自己的 worktree 里正常作业。
 - **不要** `git init` / 重新克隆 / `git checkout .` / `git reset --hard` 别人的改动。
 - 开工前先跑 `git status` 与 `git log --oneline -3`，确认没有别人的未提交改动。
-- 远端 `https://github.com/qshj765/project-2611.git`；**push 前确认任务是否授权推远端**。
+- 远端 `https://github.com/qshj729/project-2611.git`；**push 前确认任务是否授权推远端**。
 
 ### 1.2 本机环境（每个新 shell 先确认）
 
