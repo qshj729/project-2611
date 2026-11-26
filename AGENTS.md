@@ -28,8 +28,8 @@
 | 产品 | **MyApps**：给 GeckoView（Firefox 引擎）**套上 Tailscale** 的自用安卓浏览器 —— 一个 App 顶「浏览器 + Tailscale App」两个 |
 | 形态 | Kotlin + Compose，minSdk 34 / targetSdk 35，`applicationId = top.quup.myapps`，源码根包 `app`；**自用不上架**，无账号、无服务器、无遥测 |
 | 仓库 | `~/project-2611`（`android/` 是 Gradle 工程），远端 `github.com/qshj729/project-2611` |
-| 模块 | 8 个：`:app` + `:core:model` / `:core:data` / `:core:tunnel` + `:feature:browser` / `:feature:home` / `:feature:settings` + `:benchmark` |
-| 依赖方向 | `:core:model` ← `:core:data` `:core:tunnel` ← `:feature:*` ← `:app`（只往下，无环） |
+| 模块 | 9 个：`:app` + `:core:model` / `:core:data` / `:core:tunnel` / `:core:ui` + `:feature:browser` / `:feature:home` / `:feature:settings` + `:benchmark` |
+| 依赖方向 | `:core:model` ← `:core:data` `:core:tunnel` `:core:ui` ← `:feature:*` ← `:app`（只往下，无环） |
 | 方案在哪 | **应用设计方案 = 仓库根 `design.md`**（ADR / 契约 / 数据格式 / 交付口径 / 里程碑 / 风险） |
 | 进展待办 | **`todo.md`** —— 当前阶段、未闭合项 G-1~G-10、M1 清单、待拍板 D1–D6、验收状态 |
 | 交付 | 本地 `bash scripts/local-build.sh` 绿 → push → PR → **证据只认 Actions artifact** |
@@ -77,7 +77,7 @@
 ### 2.1 本地自检（提交前必过）
 
 ```bash
-bash scripts/local-build.sh            # 全量：编译 + 单测 + Lint + debug APK（约 25 分钟）
+bash scripts/local-build.sh            # 本地入口：编译 + 单测 + Lint + debug APK（约 25 分钟）
 bash scripts/local-build.sh --no-apk   # 只编译 + 单测 + Lint（更快）
 ```
 
@@ -85,6 +85,8 @@ bash scripts/local-build.sh --no-apk   # 只编译 + 单测 + Lint（更快）
 - **不打 release APK**（R8 在本机要数小时）→ release 只由 CI 出。
 - 只构建自己那条线的模块时用 `scripts/build.sh :core:tunnel:testDebugUnitTest` 这类目标，别整树构建。
 - 环境细节、内存与磁盘口径见 `design.md` §7.2 与本文件 §5.2。
+
+> **脚本分工**：`scripts/build.sh` = CI 唯一入口（GitHub Actions 调用）；`scripts/local-build.sh` = 本地入口（提交前自检，含 debug APK 产出供真机装机）。两者共用构建锁与环境配置（`scripts/hubdeck-env.sh`），但 `build.sh` 在 CI 里放宽堆到 2g，`local-build.sh` 走本机 1g 限制。
 
 ### 2.2 唯一交付证据 = GitHub Actions
 
@@ -165,16 +167,18 @@ bash scripts/local-build.sh --no-apk   # 只编译 + 单测 + Lint（更快）
 - **不终止 TLS**：代理只做 CONNECT 转发，App 看不到明文；但 App **确实在流量路径上**（能看到目标域名 / 端口 / 流量特征）→ 「关于」里写清楚。
 - **不存密码**：引擎的密码保存能力不主动开启。
 - **auth key 不落明文**：Keystore AES-256-GCM（alias `myapps.authkey.v1`）；不导出任何含 key 的文件；一键清除。
-- **权限最小**：只申请 `INTERNET` + `ACCESS_NETWORK_STATE`；**不申请** VPN / 定位 / 存储。
+- **权限最小**：申请 `INTERNET` + `ACCESS_NETWORK_STATE` + `CHANGE_NETWORK_STATE` + `POST_NOTIFICATIONS`；**不申请** VPN / 定位 / 存储。
+  - `POST_NOTIFICATIONS` 当前**代码中无任何通知发送逻辑**，暂无使用点；如后续引入前台服务通知或隧道状态通知再启用，否则建议移除。
 - 数据全本地：无遥测、无账号、无服务器。
 - 详细条款见 `design.md` §2 ADR-204 与 §4.5 C-04。
 
 ### 5.2 构建与磁盘
 
-- `gradle.properties` 已配 `-Xmx2560m` / `-XX:MaxMetaspaceSize=768m`（GeckoView 的 dex 合并需要 ≥2.5G 堆，1G 会 OOM）；本机 5.8GB RAM / 2 核。
+- `gradle.properties` 已配 `-Xmx2560m` / `-XX:MaxMetaspaceSize=768m`（GeckoView 的 dex 合并需要 ≥2.5G 堆，1G 会 OOM）；本机 **5GB RAM（可用约 3GB） / 2 核**。
 - **磁盘不足时只清**：`android/**/build`、`.build-logs/`、Gradle 缓存里可重建的部分。
 - **禁止删除**：平台 CLI 缓存目录（≈3GB）、`~/.hermes`（≈2.9GB）—— 平台 CLI 与 Hermes 工具链。
 - `~/.cache/hubdeck-toolchain` 已于 2026-11-13 删除（≈11GB），**不得恢复**。
+- **磁盘现状**：`/` 分区 40G，**剩余约 4.5G**；构建前留 ≥3GB，必要时清 `android/**/build` 与 `.build-logs/`。
 
 ### 5.3 工程坑
 

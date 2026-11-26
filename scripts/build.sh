@@ -1,8 +1,10 @@
 #!/usr/bin/env bash
-# HubDeck 构建入口（CI 内唯一入口）。
+# HubDeck 构建入口（CI 唯一入口）。
 #
-# 2026-11-13 起：本地不再构建，本脚本只在 GitHub Actions runner 上跑
-# （.github/workflows/ci.yml、apk.yml、ci-emulator.yml 调用的都是它）。
+# 定位（2026-11-18/21 负责人决策）：
+#   - `scripts/build.sh` = **CI 唯一入口**（.github/workflows/ci.yml、apk.yml、ci-emulator.yml 调用的都是它）。
+#   - `scripts/local-build.sh` = **本地入口**（提交前自检，编译 + 单测 + Lint + debug APK，供真机直接装机）。
+#   - 两者共用构建锁与环境配置（`scripts/hubdeck-env.sh`），但 `build.sh` 在 CI 里放宽堆到 2g，`local-build.sh` 走本机 1g 限制。
 #
 # 用法:
 #   scripts/build.sh :app:assembleDebug

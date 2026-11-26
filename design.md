@@ -147,8 +147,13 @@ services:
 | 但要诚实 | App **确实在流量路径上**（能看到目标域名 / 端口 / 流量特征）→ 必须在「关于」里写清楚 |
 | 密码 | 不存；引擎的密码保存能力不主动开启 |
 | auth key | Keystore（AES-256-GCM）加密后存 SharedPreferences，**不落明文** |
-| 权限 | 只申请 `INTERNET` + `ACCESS_NETWORK_STATE`；不申请 VPN / 定位 / 存储 |
+| 权限 | 申请 `INTERNET` + `ACCESS_NETWORK_STATE` + `CHANGE_NETWORK_STATE` + `POST_NOTIFICATIONS`；不申请 VPN / 定位 / 存储 |
 | 数据 | 全部本地；无遥测、无账号、无服务器 |
+
+**权限说明**：
+- `INTERNET` + `ACCESS_NETWORK_STATE`：基础网络访问与状态查询。
+- `CHANGE_NETWORK_STATE`：隧道代理启动/停止时可能需要修改网络状态（保留，待确认是否真正使用）。
+- `POST_NOTIFICATIONS`：当前**代码中无任何通知发送逻辑**，暂无使用点；如后续引入前台服务通知或隧道状态通知再启用，否则建议移除。
 
 ---
 
@@ -161,6 +166,7 @@ services:
 :core:model         契约本体：InternalService、TunnelState、SecretStore（纯 Kotlin，无 Android）
 :core:data          内网服务 YAML 解析 + App 设置（DataStore）+ Keystore 凭据 + 书签存储
 :core:tunnel        tsnet 节点生命周期 + 本地 HTTP 代理 + PAC 生成
+:core:ui            共享 UI 主题与设计令牌
 :feature:browser    GeckoView 浏览器底座（地址栏 / 导航页 / WebView 宿主）
 :feature:home       内网服务静态导航页
 :feature:settings   设置（隧道授权、清单导入导出、隧道开关、主题）
@@ -171,9 +177,9 @@ services:
 
 ```
 :core:model   ← 所有人依赖它，它不依赖任何人
-    ↑            ↑
-:core:data :core:tunnel
-    ↑            ↑
+    ↑            ↑            ↑
+:core:data :core:tunnel :core:ui
+    ↑            ↑            ↑
 :feature:home  :feature:browser  :feature:settings
     └──────────────┬───────────────┘
                    ↓
@@ -183,13 +189,15 @@ services:
 | 模块 | 允许依赖 | 禁止依赖 |
 | --- | --- | --- |
 | `:core:model` | 仅 Kotlin 标准库 | 任何 Android SDK / androidx / 其他模块 |
-| `:core:data` | `:core:model`（api） | `:core:tunnel`、`:feature:*` |
-| `:core:tunnel` | `:core:model`（api）、tsnet AAR | `:core:data`、`:feature:*`、`:app` |
+| `:core:data` | `:core:model`（api） | `:core:tunnel`、`:core:ui`、`:feature:*` |
+| `:core:tunnel` | `:core:model`（api）、tsnet AAR | `:core:data`、`:core:ui`、`:feature:*`、`:app` |
+| `:core:ui` | `:core:model`（api） | `:core:data`、`:core:tunnel`、`:feature:*`、`:app` |
 | `:feature:*` | `:core:model`（api）、需要的 `:core:*`（implementation） | 其它 `:feature:*`、`:app` |
 | `:app` | 全部 | — |
 
-> **为什么 `:core:tunnel` 不依赖 `:core:data`**：auth key 的**接口**在 `:core:model`（C-01），
+> **为什么 `:core:tunnel` 不依赖 `:core:data` / `:core:ui`**：auth key 的**接口**在 `:core:model`（C-01），
 > Keystore 实现只在 `:app` 注入 —— 隧道模块因此不碰 Android 存储实现，可在 JVM 单测里注入假实现。
+> `:core:ui` 只暴露纯 Compose 主题与令牌，不依赖任何数据 / 隧道实现。
 
 ### 3.2 关键数据流
 
@@ -568,7 +576,7 @@ fun SettingsScreen(
 | **G-3** | 隧道状态条未做 | 用户看不到隧道是否已连接 | 界面线 | 在浏览器页顶部加状态条（C-05 状态） |
 | **G-4** | `com.klethron:tsnet` 来源与许可未评估 | 非 Tailscale 官方包 | 技术负责人 | M3 出结论；必要时换官方包或退回「依赖官方 App」模式 |
 | **G-5** | 包体与冷启动未实测 | debug APK 580MB（含 4 个 ABI 的 GeckoView native 库） | 工程线 | M3 基准；release 限 arm64-v8a |
-| **G-6** | 内部标识仍是 `hubdeck.*` | 与产品名 MyApps 不一致 | 技术负责人 | 明确改名或保持 |
+| **G-6** | 内部标识仍是 `hubdeck.*` | **已关闭**：源码 / 资源里已无 `hubdeck` 标识（`applicationId = top.quup.myapps`，命名空间 `app.*`）；仅 `android/README.md` 残留（工程线已重写）。D5 决策同步收敛为**保持现状**（改名收益低、动 DataStore 与文件格式）。 | 技术负责人 | — |
 | **G-7** | `GeckoRuntimeProvider` 未配置 PAC 偏好 | 见 G-1 | 界面线 | 与 G-1 一并解决 |
 | **G-8** | 设置页旧 UI 测试失效 | `SettingsScreenTest` 引用已删除的 API | 界面线 | 重写 |
 | **G-9** | YAML 解析缺单测 | C-02 只有实现没有测试 | 数据线 | 补合法 / 非法协议 / 空标题 / 分组 / 往返用例 |
@@ -880,10 +888,9 @@ grep -nE -A2 -B2 'FATAL EXCEPTION|ANR in|AndroidRuntime:|Process: top.quup.myapp
 
 1. **G-1 的 PAC 接线具体走哪条 API？**（引擎偏好 / `GeckoSessionSettings` / 其它）—— 需要一次 POC。
 2. **G-2 用 GeckoView 原生 API 还是引入 Mozilla android-components？** 后者功能全但依赖重、版本耦合紧。
-3. **内部标识是否统一改名**（`hubdeck.*` → `myapps.*`，涉及数据文件与 DataStore 名）。
-4. **首屏是导航页还是浏览器页？**（当前默认导航页，可在设置里改）。
-5. **是否需要「内网服务清单直接从 tailnet 设备列表生成」**（控制平面能力，暂不做）。
-6. **APK 的分发方式**：自用侧载即可，还是需要 Play 内测？（影响隐私政策与无障碍要求）
+3. **首屏是导航页还是浏览器页？**（当前默认导航页，可在设置里改）。
+4. **是否需要「内网服务清单直接从 tailnet 设备列表生成」**（控制平面能力，暂不做）。
+5. **APK 的分发方式**：自用侧载即可，还是需要 Play 内测？（影响隐私政策与无障碍要求）
 
 ### 10.2 决策待办（需拍板）
 
@@ -893,7 +900,7 @@ grep -nE -A2 -B2 'FATAL EXCEPTION|ANR in|AndroidRuntime:|Process: top.quup.myapp
 | D2 | 开源协议 | Apache-2.0 / AGPL-3.0 / 不开源 | Apache-2.0（无服务端、无 copyleft 顾虑） | M4 前 | ⏔ 待拍板 |
 | D3 | APK 分发方式 | 侧载自用 / Play 内测 | **侧载自用**（不上架 → 无隐私政策 / 无障碍 / 供应链审查压力） | M1 前 | ⏔ 待拍板 |
 | D4 | tsnet 依赖去留 | 保留 / 换官方包 / 退回依赖官方 App | M3 出数据再定；代码保留切换开关 | M3 | ⏔ 待评估 |
-| D5 | 内部标识 `hubdeck.*` 是否改名 | 改名 / 保持 | 保持（改名要动 DataStore 与文件格式，收益低） | M3 | ⏔ 待定 |
+| D5 | 内部标识 `hubdeck.*` 是否改名 | 改名 / 保持 | 保持（改名要动 DataStore 与文件格式，收益低） | M3 | ✅ 已定（2026-11-25；`applicationId` 仍 `top.quup.myapps`） |
 | D6 | 是否引入 Mozilla android-components | 引入 / 用引擎原生 API | 先用引擎原生 API；确有缺口再引（依赖重、版本耦合紧） | M1 | ⏔ 待定 |
 
 > 状态以 `todo.md` 为准。
